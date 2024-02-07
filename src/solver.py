@@ -9,7 +9,7 @@ from utils import pcws_constant_project
 from utils import interface_normal, plus, minus
 from utils import CellCenterDistance
 
-from memory_profiler import profile
+#from memory_profiler import profile
 
 #from membrane import MembraneModel
 #import hh_model as ode

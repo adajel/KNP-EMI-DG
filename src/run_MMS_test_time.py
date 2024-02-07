@@ -7,13 +7,22 @@ import matplotlib.pyplot as plt
 
 parameters['ghost_mode'] = 'shared_vertex'
 
+HEADER = '\033[95m'
+OKBLUE = '\033[94m'
+OKCYAN = '\033[96m'
+OKGREEN = '\033[92m'
+WARNING = '\033[93m'
+FAIL = '\033[91m'
+ENDC = '\033[0m'
+BOLD = '\033[1m'
+UNDERLINE = '\033[4m'
+GREEN = '\033[1;37;32m%s\033[0m'
+
 if __name__ == '__main__':
     from mms_time import setup_mms
     from solver import Solver
     from collections import namedtuple
     from itertools import chain
-
-    GREEN = '\033[1;37;32m%s\033[0m'
 
     dt_0 = 1.0e-2
     Tstop = dt_0*2      # end time
