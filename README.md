@@ -4,16 +4,11 @@ Code for solving the KNP-EMI problem using a DG fem method.
 
 ### Geometry ###
 
-The code assumes all membrane facets are tagged with 1, that all interior
-facets are tagged with 0, and that the ECS is tagged with 2 and ICS cells are tagged with 1. 
-
-The membrane potential is defined as phi_i - phi_e. since we have marked cell in
-ECS with 2 and cells in ICS with 1 we have an interface normal pointing inwards.
-
-Normal will always point from higher to lower (e.g. from 2 -> 1)
+The code assumes all ECS cells are tagget with 2 and ICS cells are tagged with 1, and further that all interior
+facets are tagged with 0. The membrane potential is defined as phi_i - phi_e (i.e. phi_1 - phi_2). Since we have marked cell in
+ECS with 2 and cells in ICS with 1 we have an interface normal pointing inwards. In general, normals will always point from higher to lower (e.g. from 2 -> 1)
 
 ### Dependencies code ###
-
 
 ### License ###
 
