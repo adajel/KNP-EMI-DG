@@ -1,57 +1,19 @@
 # KNP-EMI-DG
 
 Code for solving the KNP-EMI problem using a DG fem method.
-We here approximate the following system:
 
-$\frac{\partial c_k}{\partial t} + \nabla \cdot J_k = 0$
+### Geometry ###
 
-$F \sum_k z^k \nabla \cdot J_k = 0$
+The code assumes all membrane facets are tagged with 1, that all interior
+facets are tagged with 0, and that the ECS is tagged with 2 and ICS cells are tagged with 1. 
 
-where
-
-$J_k(c_k, \phi) = - D \nabla c_k - z_k D_k \psi c_k \nabla \phi$
-
-We solve the system iteratively, by decoupling the first and second
-equation, yielding the following system: Given c_a_ and c_b_,
-iterate over the two following steps:
-
-    step I:  (emi) find phi by solving (2), with J^a(c_a_, phi) and J^b(c_b_, phi)
-    step II: (knp) find c_a and c_b by solving (1) with J^k(c_a, c_b, phi_), where phi_
-                is the solution from step I
-   (step III: solve ODEs at interface, and update membrane potential)
-
-The membrane potential is defined as phi_i - phi_e, since we have marked cell in
-ECS with 2 and cells in ICS with 1 we have an interface normal pointing inwards
-
-    ____________________
-   |                    |
-   |      ________      |
-   |     |        |     |
-   | ECS |   ICS  |     |
-   |  2  |->  1   |     |
-   | (+) |   (-)  |     |
-   |     |________|     |
-   |                    |
-   |____________________|
+The membrane potential is defined as phi_i - phi_e. since we have marked cell in
+ECS with 2 and cells in ICS with 1 we have an interface normal pointing inwards.
 
 Normal will always point from higher to lower (e.g. from 2 -> 1)
 
-NB! The code assumes all membrane facets are tagged with 1, and that all interior
-facets are tagged with 0.
-
-
 ### Dependencies code ###
 
-Get the environment needed (all dependencies etc.), build and
-and run the Docker container *ceciledc/fenics_mixed_dimensional:13-03-20* by:
-
-* Installing docker: https://docs.docker.com/engine/installation/
-* Build and start docker container with:
-
-        docker run -t -v $(pwd):/home/fenics -i ceciledc/fenics_mixed_dimensional:13-03-20
-        pip3 install vtk
-        cd ulfy-master
-        python3 setup.py install
 
 ### License ###
 
