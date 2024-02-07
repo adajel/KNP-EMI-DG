@@ -10,6 +10,10 @@ ECS with 2 and cells in ICS with 1 we have an interface normal pointing inwards.
 
 ### Dependencies code ###
 
+*To setup environment, run:
+
+    conda create --name <env> --file environment.txt
+
 ### License ###
 
 The software is free: you can redistribute it and/or modify it under the terms
