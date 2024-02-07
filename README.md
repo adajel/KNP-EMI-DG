@@ -4,7 +4,8 @@ Code for solving the KNP-EMI problem using a DG fem method.
 We here approximate the following system:
 
 $\frac{\partial c_k}{\partial t} + \nabla \cdot J_k = 0$
-$F sum_k z^k \nabla \cdot J_k = 0$
+
+$F \sum_k z^k \nabla \cdot J_k = 0$
 
 where
 
