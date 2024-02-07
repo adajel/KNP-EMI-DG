@@ -3,8 +3,10 @@
 Code for solving the KNP-EMI problem using a DG fem method.
 We here approximate the following system:
 
-- d(c_k)/dt + div(J_k) = 0, (emi)
-- F sum_k z^k div(J_k) = 0, (knp)
+$\begin{align}
+d(c_k)/dt + div(J_k) &= 0, (emi) \\
+F sum_k z^k div(J_k) &= 0, (knp)
+\end{align}$
 where
 
 -J_k(c_k, phi) = - D grad(c_k) - z_k D_k psi c_k grad(phi)
@@ -18,9 +20,9 @@ iterate over the two following steps:
                 is the solution from step I
    (step III: solve ODEs at interface, and update membrane potential)
 
- Membrane potential is defined as phi_i - phi_e, since we have
- marked cell in ECS with 2 and cells in ICS with 1 we have an
- interface normal pointing inwards
+The membrane potential is defined as phi_i - phi_e, since we have marked cell in
+ECS with 2 and cells in ICS with 1 we have an interface normal pointing inwards
+
     ____________________
    |                    |
    |      ________      |
@@ -38,7 +40,7 @@ NB! The code assumes all membrane facets are tagged with 1, and that all interio
 facets are tagged with 0.
 
 
-### Dependencies P1 code ###
+### Dependencies code ###
 
 Get the environment needed (all dependencies etc.), build and
 and run the Docker container *ceciledc/fenics_mixed_dimensional:13-03-20* by:
