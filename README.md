@@ -3,6 +3,33 @@
 ### About ###
 Code for solving the KNP--EMI problem using a DG fem method.
 
+### Dependencies code ###
+
+To setup environment, run:
+
+    conda create --name <env> --file environment.txt
+
+### Reproduce results paper ###
+
+```python
+
+# run MMS test in space
+python run_MMS_space.py
+
+# run MMS test in space
+python run_MMS_time.py
+
+# run simulation on idealized 2D geometry
+python run_2D.py
+
+# run simulation on idealized 3D geometry
+python run_3D.py
+
+# run simulation on realistic 3D geometry of rat neuron
+python run_rat_neuron.py
+
+```
+
 ### Files ###
 
 - solver.py: class for PDE solver.
@@ -35,32 +62,7 @@ marked cell in ECS with 2 and cells in ICS with 1 we have an interface
 normal pointing inwards. In general, normals will always point from higher to
 lower (e.g. from 2 -> 1)
 
-### Dependencies code ###
 
-To setup environment, run:
-
-    conda create --name <env> --file environment.txt
-
-### Reproduce results paper ###
-
-```python
-
-# run MMS test in space
-python run_MMS_space.py
-
-# run MMS test in space
-python run_MMS_time.py
-
-# run simulation on idealized 2D geometry
-python run_2D.py
-
-# run simulation on idealized 3D geometry
-python run_3D.py
-
-# run simulation on realistic 3D geometry of rat neuron
-python run_rat_neuron.py
-
-```
 
 ### License ###
 
