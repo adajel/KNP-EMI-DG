@@ -10,8 +10,8 @@ following files:
         between PDE and ODE solver etc.).
 
 - mm_*.py: spesification of membrane model (including all membrane parameters)
-    - mm_HH.py: Hodkin Huxley model
-    - mm_leak.py: leak model
+    - mm_HH.py: Hodkin Huxley model (with ODEs)
+    - mm_leak.py: passive leak model (no ODEs)
 
 - run_*.py: scripts for running various simulations. Contains PDE parameters
 (mesh, physical and numerical parameters)
