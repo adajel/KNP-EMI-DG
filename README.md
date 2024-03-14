@@ -6,8 +6,8 @@ following files:
 
 - solver.py: class for PDE solver.
 
-- membrane.py: class for ODEs solver with functions for communication between
-PDE and ODE solver (membrane potential, src terms, etc.)
+- membrane.py: class for membrane model (ODE stepping, functions for communication
+        between PDE and ODE solver etc.).
 
 - mm_*.py: spesification of membrane model (including all membrane parameters)
     - mm_HH.py: Hodkin Huxley model
@@ -22,6 +22,7 @@ PDE and ODE solver (membrane potential, src terms, etc.)
     mechanisms on realistic 3D geometry based on reconstruction of rat neuron
 
 - make_mesh_*.py: scripts for generating idealized 2D and 3D meshes
+
 ### Geometry ###
 
 The code assumes all ECS cells are tagged with 2 and ICS cells are tagged with

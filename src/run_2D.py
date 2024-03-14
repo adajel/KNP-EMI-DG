@@ -13,7 +13,6 @@ import matplotlib.pyplot as plt
 
 from solver import Solver
 import mm_hh as mm_hh
-import mm_leak as mm_leak
 
 # define colors for printing
 class bcolors:

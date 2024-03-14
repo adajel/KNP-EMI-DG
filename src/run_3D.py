@@ -10,7 +10,6 @@ import numpy as np
 from collections import namedtuple
 
 from solver import Solver
-from membrane import MembraneModel
 import mm_hh as mm_hh
 
 # Define colors for printing
