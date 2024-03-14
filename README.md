@@ -12,7 +12,7 @@ following files:
     - mm_HH.py: Hodkin Huxley model
     - mm_leak.py: leak model
 
-- run_*.py: scripts spesifying mesh, physical and numerical PDE parametersfor and for running various simulations
+- run_*.py: scripts for running various simulations. Contains PDE parameters (mesh, physical and numerical parameters)
     - run_mms_space.py: run MMS test in space
     - run_2D.py: run simulation with HH in idealized 3D axons
     - run_3D.py: run simulation with HH in idealized 3D axons
