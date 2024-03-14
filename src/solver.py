@@ -9,10 +9,7 @@ from utils import pcws_constant_project
 from utils import interface_normal, plus, minus
 from utils import CellCenterDistance
 
-#from memory_profiler import profile
-
-#from membrane import MembraneModel
-#import hh_model as ode
+from membrane import MembraneModel
 
 # define jump across the membrane (interface gamma)
 JUMP = lambda f, n: minus(f, n) - plus(f, n)
@@ -38,13 +35,13 @@ class bcolors:
 #   J_k(c_k, phi) = - D grad(c_k) - z_k D_k psi c_k grad(phi)
 #
 #   We solve the system iteratively, by decoupling the first and second
-#   equation, yielding the following system: Given c_a_ and c_b_,
+#   equation, yielding the following system: Given c_k_ and phi_M_
 #   iterate over the two following steps:
 #
-#       step I:  (emi) find phi by solving (2), with J^a(c_a_, phi) and J^b(c_b_, phi)
-#       step II: (knp) find c_a and c_b by solving (1) with J^k(c_a, c_b, phi_), where phi_
+#       step I:  (emi) find phi by solving (2), with J^k(c_k_, phi)
+#       step II: (knp) find c_k by solving (1) with J^k(c_k, phi), where phi
 #                is the solution from step I
-#     (step III: solve ODEs at interface, and update membrane potential)
+#      (step III: solve ODEs at interface, and update membrane potential)
 #
 # Membrane potential is defined as phi_i - phi_e, since we have
 # marked cell in ECS with 2 and cells in ICS with 1 we have an
@@ -62,22 +59,21 @@ class bcolors:
 #
 # Normal will always point from higher to lower (e.g. from 2 -> 1)
 #
-# NB! The code assumes all membrane facets are tagged with 1, and that all interior
-# facets are tagged with 0.
+# NB! The code assumes that all interior facets are tagged with 0.
 
 class Solver:
-    def __init__(self, params, ion_list, degree_emi=1, degree_knp=1, mms=None):
-        """ initialize solver """
+    def __init__(self, params, ion_list, degree_emi=1, degree_knp=1, mms=None, sf=1):
+        """
+        Initialize solver
+        """
 
         self.ion_list = ion_list            # list of ions species
-        self.N_ions = len(ion_list[:-1])    # number of ions to solver for
-        self.degree_emi = degree_emi        # polynomial degree
-        self.degree_knp = degree_knp        # polynomial degree
+        self.N_ions = len(ion_list[:-1])    # number of ions
+        self.degree_emi = degree_emi        # polynomial degree EMI subproblem
+        self.degree_knp = degree_knp        # polynomial degree KNP subproblem
         self.mms = mms                      # boolean for mms test
         self.params = params                # physical parameters
-
-        # frequency for saving results
-        self.sf = 1
+        self.sf = sf                        # frequency for saving results
 
         # timers
         self.ode_solve_timer = 0
@@ -89,7 +85,9 @@ class Solver:
         return
 
     def setup_domain(self, mesh, subdomains, surfaces):
-        """ setup mesh and associated parameters, and element spaces """
+        """
+        Setup mesh and associated parameters
+        """
 
         # set mesh, subdomains, and surfaces
         self.mesh = mesh
@@ -109,15 +107,10 @@ class Solver:
         # interface normal
         self.n_g = interface_normal(subdomains, mesh)
 
-        # DG penalty parameter
+        # DG penalty parameters
         self.gdim = self.mesh.geometry().dim()
         self.tau_emi = Constant(20*self.gdim*self.degree_emi)
         self.tau_knp = Constant(20*self.gdim*self.degree_knp)
-
-        # DG0 for EMI sub-problem
-        if self.degree_emi == 0:
-            self.hA_emi = CellCenterDistance(self.mesh)
-            self.tau_emi = 1.0
 
         # DG elements for ion concentrations and the potential
         self.PK_emi = FiniteElement('DG', mesh.ufl_cell(), self.degree_emi)
@@ -131,7 +124,9 @@ class Solver:
 
 
     def setup_parameters(self):
-        """ setup physical parameters """
+        """
+        Setup physical parameters
+        """
 
         # setup physical parameters
         params = self.params
@@ -143,7 +138,6 @@ class Solver:
         self.F = Constant(params.F)                     # Faraday constant
         self.R = Constant(self.params.R)                # Gas constant
         self.temperature = Constant(params.temperature) # temperature
-        #self.phi_M_init = Constant(params.phi_M_init)  # initial membrane potential
         self.phi_M_init = params.phi_M_init             # initial membrane potential
         self.psi = self.F/(self.R*self.temperature)     # shorthand
 
@@ -151,20 +145,22 @@ class Solver:
         for idx, ion in enumerate(self.ion_list):
 
             # project diffusion coefficients to PK based on subdomain
-            D = self.make_global(Constant(ion['D1']), Constant(ion['D2']))
+            D = self.make_global(ion['D_sub'])
             ion['D'] = D
 
             # define global coupling coefficient (for MMS case)
             if self.mms is not None:
                 # project coupling coefficients to PK based on subdomain
-                C = self.make_global(Constant(ion['C1']), Constant(ion['C2']))
+                C = self.make_global(ion['C_sub'])
                 ion['C'] = C
 
         return
 
 
     def setup_FEM_spaces(self):
-        """ setup function spaces and functions """
+        """
+        Setup function spaces and functions
+        """
 
         # create function space for potential (phi)
         self.V_emi = FunctionSpace(self.mesh, self.PK_emi)
@@ -184,19 +180,11 @@ class Solver:
 
         ion_list = self.ion_list
 
-        #print("dofs EMI", self.V_emi.dim())
-        #print("dofs KNP", self.V_knp.dim())
-        #print("num cells", self.mesh.num_cells())
-        #print("sum dofs", self.V_emi.dim() + self.V_knp.dim())
-        #sys.exit(0)
-
         # set initial conditions concentrations
         for idx, ion in enumerate(self.ion_list):
-            # get initial condition for ions
-            c1 = ion['c1_init']; c2 = ion['c2_init']
 
             # interpolate initial conditions to global function and assign
-            c_init = self.make_global(c1, c2)
+            c_init = self.make_global(ion['c_init_sub'])
 
             if idx == len(ion_list) - 1:
                 # set initial concentrations for eliminated ion
@@ -212,6 +200,50 @@ class Solver:
         self.phi_M_prev_PDE = pcws_constant_project(self.phi_M_init, self.Q)
 
         return
+
+
+    def setup_membrane_model(self, stim_params, ode_models):
+        """
+        Initiate membrane models that contains membrane mechanisms (passive
+        dynamics / ODEs, and src terms for PDE system)
+        """
+
+        # set membrane parameters
+        self.stimulus = stim_params.stimulus                 # stimulus
+        self.stimulus_locator = stim_params.stimulus_locator # locator for stimulus
+
+        # list of membrane models
+        self.mem_models = []
+
+        # initialize and append ode models
+        for tag, ode_model in ode_models.items():
+            # Initialize ODE model
+            mem_ode_model = MembraneModel(ode_model, facet_f=self.surfaces, tag=tag, V=self.Q)
+
+            # Set ODE capacitance (to ensure same values are used)
+            mem_ode_model.set_parameter_values({'Cm': lambda x: self.params.C_M})
+
+            # Initialize src terms for PDE step
+            I_ch_k = {} # dictionary for ion specific currents
+
+            for ion in self.ion_list:
+
+                # function for src term pde
+                I_ch_k_ = Function(self.Q)
+
+                # set src terms pde
+                mem_ode_model.get_parameter("I_ch_" + ion['name'], I_ch_k_)
+
+                # set function in dictionary
+                I_ch_k[ion['name']] = I_ch_k_
+
+            # define membrane model (with ode model and src terms for PDEs)
+            mem_model = {'ode': mem_ode_model, 'I_ch_k': I_ch_k}
+
+            # append to list of membrane models
+            self.mem_models.append(mem_model)
+
+            return
 
 
     def setup_varform_emi(self):
@@ -230,10 +262,9 @@ class Solver:
         v_phi = TestFunction(self.V_emi)
 
         # initialize
-        self.kappa = 0                      # kappa
-        a = 0; L = 0                        # rhs and lhs forms
-        self.I_ch = [0]*len(self.mem_tags) # sum of ion specific channel currents
-        self.alpha_sum = 0                 # sum of fractions intracellular
+        self.kappa = 0                       # kappa
+        a = 0; L = 0                         # rhs and lhs forms
+        self.alpha_sum = 0                   # sum of fractions intracellular
 
         for idx, ion in enumerate(ion_list):
 
@@ -248,12 +279,6 @@ class Solver:
             E = R * temperature / (F * ion['z']) * ln(plus(c_k_, n_g) / minus(c_k_, n_g))
             ion['E'] = pcws_constant_project(E, self.Q)
 
-            # update ion specific channel current (for each membrane model)
-            for jdx, mm in enumerate(ion['mem_models']):
-                mm['I_ch'] = mm['g_k']*(self.phi_M_prev_PDE - ion['E'])
-                # update total channel current for each tag
-                self.I_ch[jdx] += mm['I_ch']
-
             # update alpha
             self.alpha_sum += ion['D'] * ion['z'] * ion['z'] * c_k_
 
@@ -264,6 +289,18 @@ class Solver:
             L += - F * ion['z'] * inner((ion['D'])*grad(c_k_), grad(v_phi)) * dx \
                  + F * ion['z'] * inner(dot(avg((ion['D'])*grad(c_k_)), n('+')), jump(v_phi)) * dS(0) \
 
+        # if not MMS, calculate total ionic current
+        if self.mms is None:
+            # sum of ion specific channel currents for each membrane tag
+            self.I_ch = [0]*len(self.mem_models)
+
+            # loop though membrane models to set total ionic current
+            for jdx, mm in enumerate(self.mem_models):
+                # loop through ion species
+                for key, value in mm['I_ch_k'].items():
+                    # update total channel current for each tag
+                    self.I_ch[jdx] += mm['I_ch_k'][key]
+
         # equation potential (drift terms)
         a += inner(self.kappa*grad(u_phi), grad(v_phi)) * dx \
            - inner(dot(avg(self.kappa*grad(u_phi)), n('+')), jump(v_phi)) * dS(0) \
@@ -271,18 +308,18 @@ class Solver:
            + tau_emi/avg(hA) * inner(avg(self.kappa)*jump(u_phi), jump(v_phi)) * dS(0)
 
         if self.mms is None:
-
             # coupling condition at interface
             if self.splitting_scheme:
                 # robin condition with splitting
-                g_robin_emi = [self.phi_M_prev_PDE]*len(self.mem_tags)
+                g_robin_emi = [self.phi_M_prev_PDE]*len(self.mem_models)
             else:
                 # original robin condition (without splitting)
-                # TODO
-                #g_robin_emi = self.phi_M_prev_PDE - (1 / C_phi) * self.I_ch
                 g_robin_emi = [self.phi_M_prev_PDE - (1 / C_phi) * I for I in self.I_ch]
 
-            for jdx, tag in enumerate(self.mem_tags):
+            for jdx, mm in enumerate(self.mem_models):
+                # get tag
+                tag = mm['ode'].tag
+
                 # add robin condition at interface
                 L += C_phi * inner(avg(g_robin_emi[jdx]), JUMP(v_phi, n_g)) * dS(tag)
                 # add coupling term at interface
@@ -416,7 +453,6 @@ class Solver:
 
         return
 
-    #@profile
     def solve_emi(self):
         """ solve emi system using either a direct or iterative solver """
 
@@ -471,16 +507,8 @@ class Solver:
             if self.filename is not None:
                 self.file_emi_niter.write("niter: %d \n" % niter)
 
-            print("-------------------------")
-            print("niter emi", niter)
-            print("-------------------------")
-
         if self.filename is not None:
             self.file_emi_solve.write("solve_time: %.4f \n" % (res))
-
-        # The solution x lives in mixed space, but we only want part of the
-        # solution -> fill phi with relevant part of solution.
-        # self.phi.assign(project(self.x_emi.split()[0], self.V_emi))
 
         self.phi.vector().vec().array_w[:] = self.x_emi.array_r[:]
         # make assign above work in parallel
@@ -562,24 +590,28 @@ class Solver:
                 # calculate coupling coefficient
                 C = alpha * C_M / (F * z * self.dt)
 
-                # loop through each membrane model (and associated membrane tag)
-                for jdx, mm in enumerate(ion['mem_models']):
+                # loop through each membrane model
+                for jdx, mm in enumerate(self.mem_models):
+
+                    # get facet tag
+                    tag = mm['ode'].tag
+
                     if self.splitting_scheme:
                         # robin condition with splitting
                         g_robin_knp = self.phi_M_prev_PDE \
-                                    - self.dt / (C_M * alpha) * mm['I_ch'] \
+                                    - self.dt / (C_M * alpha) * mm['I_ch_k'][ion['name']] \
                                     + (self.dt / C_M) * self.I_ch[jdx]
                     else:
                         # original robin condition (without splitting)
                         g_robin_knp = self.phi_M_prev_PDE \
-                                    - self.dt / (C_M * alpha) * mm['I_ch']
+                                    - self.dt / (C_M * alpha) * mm['I_ch_k'][ion['name']]
 
                     # add coupling condition at interface
-                    L += JUMP(C * g_robin_knp * v_c, self.n_g) * dS(mm['tag'])
+                    L += JUMP(C * g_robin_knp * v_c, self.n_g) * dS(tag)
 
                     # add coupling terms on interface gamma
-                    L += - jump(phi) * jump(C) * avg(v_c) * dS(mm['tag']) \
-                         - jump(phi) * avg(C) * jump(v_c) * dS(mm['tag'])
+                    L += - jump(phi) * jump(C) * avg(v_c) * dS(tag) \
+                         - jump(phi) * avg(C) * jump(v_c) * dS(tag)
 
             # add terms for manufactured solutions test
             if self.mms is not None:
@@ -590,7 +622,7 @@ class Solver:
                 g_robin_knp_2 = ion['g_robin_2']
 
                 # get global coupling coefficients
-                C = ion['C']; C_1 = ion['C1']; C_2 = ion['C2']
+                C = ion['C']; C_1 = ion['C_sub'][1]; C_2 = ion['C_sub'][2]
 
                 lm_tags = self.lm_tags
 
@@ -677,7 +709,6 @@ class Solver:
 
         return
 
-    #@profile
     def solve_knp(self):
         """ solve knp system """
 
@@ -744,10 +775,6 @@ class Solver:
             if self.filename is not None:
                 self.file_knp_solve.write("solve_time: %.4f \n" % (res))
                 self.file_knp_niter.write("niter: %d \n" % niters)
-
-            print("-------------------------")
-            print("niter knp", niters)
-            print("-------------------------")
 
         # assign new value to function c
         self.c.vector().vec().array_w[:] = x_knp.array_r[:]
@@ -892,76 +919,163 @@ class Solver:
 
 
     def solve_system_passive(self, Tstop, t, solver_params, membrane_params, filename=None):
-        """ solve system with passive membrane mechanisms """
+        """
+        Solve system with passive membrane mechanisms
+        """
 
-        # parameters for solvers
-        self.solver_params = solver_params
+        # Setup solver and parameters
+        self.solver_params = solver_params          # parameters for solvers
+        self.direct_emi = solver_params.direct_emi  # choice of emi solver
+        self.direct_knp = solver_params.direct_knp  # choice of knp solver
 
-        g_a = membrane_params.g_a_leak       # Na max conductivity (S/m**2)
-        g_b = membrane_params.g_b_leak       # K max conductivity (S/m**2)
-        g_c = membrane_params.g_c_leak       # Na leak conductivity (S/m**2)
-
-        # Set membrane models and associated tags
-        mem_models_a = [{'tag':1, 'g_k':g_a}]
-        mem_models_b = [{'tag':1, 'g_k':g_b}]
-        mem_models_c = [{'tag':1, 'g_k':g_c}]
-
-        # Set tags (NB! Must match with tags in membrane models)
-        self.mem_tags = [1]
-
-        # Assign membrane models
-        self.ion_list[0]['mem_models'] = mem_models_a
-        self.ion_list[1]['mem_models'] = mem_models_b
-        self.ion_list[2]['mem_models'] = mem_models_c
+        self.splitting_scheme = False               # no splitting scheme
 
         # Set filename for saving results
         self.filename = filename
 
-        # choice of solver
-        self.direct_emi = solver_params.direct_emi
-        self.direct_knp = solver_params.direct_knp
-
-        # splitting scheme
-        self.splitting_scheme = False
-
-        # setup physical parameters
-        self.setup_parameters()
-        # setup function spaces and numerical parameters
-        self.setup_FEM_spaces()
-
-        # setup variational formulation
+        # Setup variational formulations
         self.setup_varform_emi()
         self.setup_varform_knp()
 
+        # Setup solvers
         self.setup_solver_emi()
         self.setup_solver_knp()
 
-        # initialize save results
+        # Initialize save results
         if filename is not None:
-            self.initialize_h5_savefile(filename + '/results.h5')
+            # file for solutions to equations
+            self.initialize_h5_savefile(filename + 'results.h5')
+            # file for CPU timings, number of iterations etc.
+            self.initialize_solver_savefile(filename + 'solver/')
 
+        # Solve system (PDEs and ODEs)
         for k in range(int(round(Tstop/float(self.dt)))):
+            # Start timer (ODE solve)
+            ts = time.perf_counter()
 
+            if self.mms is None:
+                # if not mms, get src terms for PDEs from passive model
+                for mem_model in self.mem_models:
+
+                    ode_model = mem_model['ode']
+
+                    # Update membrane potential and Nernst potential in membrane model
+                    ode_model.set_membrane_potential(self.phi_M_prev_PDE)
+                    ode_model.set_parameter('E_K', self.ion_list[0]['E'])
+                    ode_model.set_parameter('E_Na', self.ion_list[2]['E'])
+
+                    # Get src terms for next PDE step
+                    for ion, I_ch_k in mem_model['I_ch_k'].items():
+                        # update src term for each ion species
+                        ode_model.get_parameter("I_ch_" + ion, I_ch_k)
+
+            # End timer (ODE solve)
+            te = time.perf_counter()
+            res = te - ts
+            print(f"{bcolors.OKGREEN} CPU Execution time ODE solve: {res:.4f} seconds {bcolors.ENDC}")
+
+            # Solve PDEs
             self.solve_for_time_step(k, t)
             #self.solve_for_time_step_picard(k, t)
 
-            # save to file
+            # Save results
             if (k % self.sf) == 0 and filename is not None:
-                # save results
-                self.save_h5()
+                self.save_h5()      # fields
+                self.save_solver(k) # solver statistics
+
+        # Close files
+        if filename is not None:
+            self.close_h5()
+            self.close_save_solver()
 
         # combine solution for the potential and concentrations
         uh = split(self.c) + (self.phi,)
 
-        if not self.direct_emi and filename is not None:
-            self.file_emi_niter.close()
-            self.file_knp_niter.close()
+        return uh, self.ion_list[-1]['c']
 
-        # initialize save results
+
+    def solve_system_active(self, Tstop, t, solver_params, filename=None):
+        """ Solve system with active membrane mechanisms (ODEs) """
+
+        # Setup solver and parameters
+        self.solver_params = solver_params          # parameters for solvers
+        self.direct_emi = solver_params.direct_emi  # choice of emi solver
+        self.direct_knp = solver_params.direct_knp  # choice of knp solver
+
+        stimulus = self.stimulus
+        stimulus_locator = self.stimulus_locator
+
+        self.splitting_scheme = True                    # splitting scheme
+
+        # Set filename for saving results
+        self.filename = filename
+
+        # Setup variational formulations
+        self.setup_varform_emi()
+        self.setup_varform_knp()
+
+        # Setup solvers
+        self.setup_solver_emi()
+        self.setup_solver_knp()
+
+        # Calculate ODE time step (s)
+        dt_ode = float(self.dt/self.params.n_steps_ODE)
+
+        # Initialize save results
+        if filename is not None:
+            # file for solutions to equations
+            self.initialize_h5_savefile(filename + 'results.h5')
+            # file for CPU timings, number of iterations etc.
+            self.initialize_solver_savefile(filename + 'solver/')
+
+        # Solve system (PDEs and ODEs)
+        for k in range(int(round(Tstop/float(self.dt)))):
+            # Start timer (ODE solve)
+            ts = time.perf_counter()
+
+            # solve ODEs (membrane models) for each membrane tag
+            for mem_model in self.mem_models:
+
+                ode_model = mem_model['ode']
+
+                # Update initial values and parameters in ODE solver (based on previous PDEs step)
+                ode_model.set_membrane_potential(self.phi_M_prev_PDE)
+                ode_model.set_parameter('E_K', self.ion_list[0]['E'])
+                ode_model.set_parameter('E_Na', self.ion_list[2]['E'])
+
+                # Solve ODEs
+                ode_model.step_lsoda(dt=dt_ode*self.params.n_steps_ODE, \
+                    stimulus=stimulus, stimulus_locator=stimulus_locator)
+
+                # Update PDE functions based on ODE output
+                ode_model.get_membrane_potential(self.phi_M_prev_PDE)
+
+                # Update src terms for next PDE step based on ODE output
+                for ion, I_ch_k in mem_model['I_ch_k'].items():
+                    # update src term for each ion species
+                    ode_model.get_parameter("I_ch_" + ion, I_ch_k)
+
+            # End timer (ODE solve)
+            te = time.perf_counter()
+            res = te - ts
+            print(f"{bcolors.OKGREEN} CPU Execution time ODE solve: {res:.4f} seconds {bcolors.ENDC}")
+
+            # Solve PDEs
+            self.solve_for_time_step(k, t)
+            #self.solve_for_time_step_picard(k, t)
+
+            # Save results
+            if (k % self.sf) == 0 and filename is not None:
+                self.save_h5()      # fields
+                self.save_solver(k) # solver statistics
+
+        # Close files
         if filename is not None:
             self.close_h5()
+            self.close_save_solver()
 
-        return uh, self.ion_list[-1]['c']
+        return
+
 
 
     def initialize_solver_savefile(self, path_timings):
@@ -979,12 +1093,6 @@ class Solver:
         num_cells = self.mesh.num_cells()
         dofs_emi = self.V_emi.dim()
         dofs_knp = self.V_knp.dim()
-
-        print("dofs")
-        print(dofs_knp)
-        print(dofs_emi)
-        print(num_cells)
-        print("dofs")
 
         if self.direct_emi:
             self.file_emi_solve = open(path_timings + "emi_solve_dir_%d.txt" % reso, "w")
@@ -1088,10 +1196,6 @@ class Solver:
         self.h5_file.write(self.ion_list[-1]['c'], '/elim_concentration',  self.h5_idx)
         self.h5_file.write(self.phi, '/potential', self.h5_idx)
 
-        self.h5_file.write(self.n_HH, '/n_HH',  self.h5_idx)
-        self.h5_file.write(self.h_HH, '/h_HH',  self.h5_idx)
-        self.h5_file.write(self.m_HH, '/m_HH',  self.h5_idx)
-
         return
 
     def save_h5(self):
@@ -1101,10 +1205,6 @@ class Solver:
         self.h5_file.write(self.ion_list[-1]['c'], '/elim_concentration',  self.h5_idx)
         self.h5_file.write(self.phi, '/potential', self.h5_idx)
 
-        self.h5_file.write(self.n_HH, '/n_HH',  self.h5_idx)
-        self.h5_file.write(self.h_HH, '/h_HH',  self.h5_idx)
-        self.h5_file.write(self.m_HH, '/m_HH',  self.h5_idx)
-
         return
 
     def close_h5(self):
@@ -1112,37 +1212,44 @@ class Solver:
         self.h5_file.close()
         return
 
-    def make_global(self, f1, f2):
+    def make_global(self, f):
 
         mesh = self.mesh
         subdomains = self.subdomains
 
-        # DG0 space for projecting coefficients
+        # DG space for projecting coefficients
         Q = FunctionSpace(self.mesh, self.PK_knp)
 
         dofmap = Q.dofmap()
 
-        # dofs in domain 1 and domain 2
-        o1_dofs = []
-        o2_dofs = []
+        # list of list of dofs for each sub-domain
+        o_dofss = [[] for i in range(len(f)) ]
 
-        for cell in cells(mesh): # compute dofs in the domains
-            if subdomains[cell] == 1:
-                o1_dofs.extend(dofmap.cell_dofs(cell.index()))
-            elif subdomains[cell] == 2:
-                o2_dofs.extend(dofmap.cell_dofs(cell.index()))
-            else:
-                print("cell not marked")
-                sys.exit(0)
+        i = 0
+        # fill list with relevant dofs for each sub-domains
+        for cell in cells(mesh):
+            for tag, function in f.items():
+                if subdomains[cell] == tag:
+                    o_dofss[tag-1].extend(dofmap.cell_dofs(cell.index()))
+                    i += 1
+                    break
 
-        o2_dofs = list(set(o2_dofs))
-        o1_dofs = list(set(o1_dofs))
+        # check that all cells are matched with tags in loop above
+        assert sum(1 for _ in cells(mesh)) == i, \
+               "Dictionaries for DG data must match cell tags in mesh"
 
-        F1 = interpolate(f1, Q)
-        F2 = interpolate(f2, Q)
+        # set dofs list
+        for o_dofs in o_dofss:
+            o_dofs = list(set(o_dofs))
+
         F = Function(Q)
 
-        F.vector()[o2_dofs] = F2.vector()[o2_dofs]
-        F.vector()[o1_dofs] = F1.vector()[o1_dofs]
+        for tag, function in f.items():
+            # interpolate data for sub-domain with tag tag
+            F_tag = interpolate(function, Q)
+            # copy to global function
+            F.vector()[o_dofss[tag-1]] = F_tag.vector()[o_dofss[tag-1]]
+
+        File("test.pvd") << F
 
         return F

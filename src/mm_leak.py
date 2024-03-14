@@ -29,13 +29,20 @@ def init_parameter_values(**values):
     """
     Initialize parameter values
     """
-    # Param values (values are taken from PDE solver)
-    init_values = np.array([0, 0, 0, 0, 0, 0], dtype=np.float_)
+
+    # Membrane parameters
+    g_leak_Na = 2.0*0.5   # Na leak conductivity (S/m**2)
+    g_leak_K  = 8.0*0.5   # K leak conductivity (S/m**2)
+
+    # Set initial parameter values
+    init_values = np.array([g_leak_Na, g_leak_K, \
+                            0, 0, 0, 0, 0, 0, 0], dtype=np.float_)
 
     # Parameter indices and limit checker
     param_ind = dict([("g_leak_Na", 0), ("g_leak_K", 1), \
                       ("E_Na", 2), ("E_K", 3), \
-                      ("Cm", 4), ("stim_amplitude", 5)])
+                      ("Cm", 4), ("stim_amplitude", 5),
+                      ("I_ch_Na", 6), ("I_ch_K", 7), ("I_ch_Cl", 8)])
 
     for param_name, value in values.items():
         if param_name not in param_ind:
@@ -69,7 +76,8 @@ def parameter_indices(*params):
     """
     param_inds = dict([("g_leak_Na", 0), ("g_leak_K", 1), \
                        ("E_Na", 2), ("E_K", 3), \
-                       ("Cm", 4), ("stim_amplitude", 5)])
+                       ("Cm", 4), ("stim_amplitude", 5), \
+                       ("I_ch_Na", 6), ("I_ch_K", 7), ("I_ch_Cl", 8)])
 
     indices = []
     for param in params:
@@ -110,10 +118,16 @@ def rhs_numba(t, states, values, parameters):
     i_Stim = parameters[5] * np.exp(-np.mod(t, 0.02)/0.002)
 
     # Expressions for the Sodium channel component
-    i_Na = (parameters[0] + i_Stim) * \
-           (states[0] - parameters[2])
+    i_Na = (parameters[0] + i_Stim) * (states[0] - parameters[2])
 
     # Expressions for the Potassium channel component
     i_K = parameters[1] * (states[0] - parameters[3])
+
+    # set I_ch_Na
+    parameters[6]
+    # set I_ch_K
+    parameters[7]
+    # set I_ch_Cl
+    parameters[8]
 
     values[0] = (- i_K - i_Na)/parameters[4]

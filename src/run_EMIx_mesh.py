@@ -9,7 +9,7 @@ import numpy as np
 
 from collections import namedtuple
 
-from solver_nullspace_new_prec import Solver
+from solver import Solver
 from membrane import MembraneModel
 import mm_hh as ode
 import mm_leak as leak

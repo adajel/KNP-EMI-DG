@@ -1,18 +1,39 @@
 # KNP-EMI-DG
 
+### Geometry ###
 Code for solving the KNP-EMI problem using a DG fem method.
 
 ### Geometry ###
 
-The code assumes all ECS cells are tagget with 2 and ICS cells are tagged with 1, and further that all interior
-facets are tagged with 0. The membrane potential is defined as phi_i - phi_e (i.e. phi_1 - phi_2). Since we have marked cell in
-ECS with 2 and cells in ICS with 1 we have an interface normal pointing inwards. In general, normals will always point from higher to lower (e.g. from 2 -> 1)
+The code assumes all ECS cells are tagged with 2 and ICS cells are tagged with
+1, and that all interior facets are tagged with 0. The membrane
+potential is defined as phi_i - phi_e (i.e. phi_1 - phi_2). Since we have
+marked cell in ECS with 2 and cells in ICS with 1 we have an interface
+normal pointing inwards. In general, normals will always point from higher to
+lower (e.g. from 2 -> 1)
 
 ### Dependencies code ###
 
-*To setup environment, run:
+To setup environment, run:
 
     conda create --name <env> --file environment.txt
+
+### Usage ###
+
+```python
+
+# run MMS test in space
+python run_MMS_space.py
+
+# run MMS test in space
+python run_MMS_tim.py
+
+# run simulation on idealized 2D geometry
+python run_2D.py
+
+# run simulation on idealized 3D geometry
+python run_3D.py
+```
 
 ### License ###
 

@@ -11,8 +11,8 @@ from collections import namedtuple
 
 from solver import Solver
 from membrane import MembraneModel
-import mm_hh as ode
-import mm_leak as leak
+import mm_hh as mm_hh
+import mm_leak as mm_leak
 
 # Define colors for printing
 class bcolors:
@@ -26,168 +26,6 @@ class bcolors:
     BOLD = '\033[1m'
     UNDERLINE = '\033[4m'
 
-class Solver3DRatNeuron(Solver):
-
-    def __init__(self, params, ion_list, degree_emi=1, degree_knp=1, mms=None):
-        super().__init__(params, ion_list, degree_emi=1, degree_knp=1, mms=None)
-
-    def solve_system_active(self, Tstop, t, solver_params, membrane_params, filename=None):
-        """ Solve KNP-EMI system with active membrane mechanisms (ODEs) """
-
-        # Setup solver and parameters
-        self.solver_params = solver_params          # parameters for solvers
-        self.direct_emi = solver_params.direct_emi  # choice of emi solver
-        self.direct_knp = solver_params.direct_knp  # choice of knp solver
-        self.splitting_scheme = True                # splitting scheme
-        self.setup_parameters()                     # setup physical parameters
-        self.setup_FEM_spaces()                     # setup function spaces and numerical parameters
-
-        # Get membrane parameters
-        self.membrane_params = membrane_params      # parameters for membrane model(s)
-        g_Na_bar = membrane_params.g_Na_bar         # Na max conductivity (S/m**2)
-        g_K_bar = membrane_params.g_K_bar           # K max conductivity (S/m**2)
-        g_Na_leak = membrane_params.g_Na_leak       # Na leak conductivity (S/m**2)
-        g_K_leak = membrane_params.g_K_leak         # K leak conductivity (S/m**2)
-        g_Cl_leak = membrane_params.g_Cl_leak       # Cl leak conductivity (S/m**2)
-        g_syn_bar = membrane_params.g_syn_bar       # synaptic conductivity (S/m**2)
-
-        self.filename = filename
-
-        # Create membrane model
-        membrane_leak = MembraneModel(ode, facet_f=self.surfaces, tag=1, V=self.Q)
-        membrane_ode = MembraneModel(ode, facet_f=self.surfaces, tag=2, V=self.Q)
-
-        # set stimulus ODE
-        stimulus = {'stim_amplitude': g_syn_bar}
-        stimulus_locator = lambda x: (x[1] < -80e-6) or (x[0] < -125e-6) or (x[0] > 140e-6)
-
-        g_syn = Expression('g_syn_bar * exp(-fmod(t, 0.02)/0.002) * \
-                           ((x[1] < -80e-6) + (x[0] < -125e-6) + (x[0] > \
-                           140e-6))', t=t, g_syn_bar=g_syn_bar, degree=4)
-
-        # Initialize gating variables ODEs
-        self.n_HH = Function(self.Q)
-        self.m_HH = Function(self.Q)
-        self.h_HH = Function(self.Q)
-
-        # Define conductivities for membrane models dendrite (tag 1)
-        g_K_1 = g_K_leak
-        g_Cl_1 = g_Cl_leak
-        g_Na_1 = g_Na_leak + g_syn
-
-        # Define conductivities for membrane model soma and axon (tag 2)
-        g_K_2 = g_K_leak + Constant(g_K_bar)*self.n_HH**4
-        g_Cl_2 = g_Cl_leak
-        g_Na_2 = g_Na_leak + Constant(g_Na_bar)*self.m_HH**3*self.h_HH
-        #g_Na_2 = g_Na_leak + g_syn + Constant(g_Na_bar)*self.m_HH**3*self.h_HH
-
-        # Set membrane models and associated tags
-        mem_models_K  = [{'tag':1, 'g_k':g_K_1}, {'tag':2, 'g_k':g_K_2}]
-        mem_models_Cl = [{'tag':1, 'g_k':g_Cl_1}, {'tag':2, 'g_k':g_Cl_2}]
-        mem_models_Na = [{'tag':1, 'g_k':g_Na_1}, {'tag':2, 'g_k':g_Na_2}]
-
-        # Set tags (NB! Must match with tags in membrane models)
-        self.mem_tags = [1, 2]
-
-        # Assign membrane models
-        self.ion_list[0]['mem_models'] = mem_models_K
-        self.ion_list[1]['mem_models'] = mem_models_Cl
-        self.ion_list[2]['mem_models'] = mem_models_Na
-
-        # Set ODE parameters (to ensure same values are used)
-        membrane_ode.set_parameter_values({'g_K_bar': lambda x: g_K_bar})
-        membrane_ode.set_parameter_values({'g_Na_bar': lambda x: g_Na_bar})
-        membrane_ode.set_parameter_values({'Cm': lambda x: self.params.C_M})
-        membrane_ode.set_parameter_values({'g_leak_K': lambda x: g_K_leak})
-        membrane_ode.set_parameter_values({'g_leak_Na': lambda x: g_Na_leak})
-
-        # Set passive parameters (to ensure same values are used)
-        membrane_leak.set_parameter_values({'Cm': lambda x: self.params.C_M})
-        membrane_leak.set_parameter_values({'g_leak_K': lambda x: g_K_leak})
-        membrane_leak.set_parameter_values({'g_leak_Na': lambda x: g_Na_leak})
-
-        # Setup variational formulations
-        self.setup_varform_emi()
-        self.setup_varform_knp()
-
-        # Setup solvers
-        self.setup_solver_emi()
-        self.setup_solver_knp()
-
-        # Calculate ODE time step (s)
-        dt_ode = float(self.dt/self.params.n_steps_ODE)
-
-        # Initialize save results
-        if filename is not None:
-            # file for solutions to equations
-            self.initialize_h5_savefile(filename + 'results.h5')
-            # file for CPU timings, number of iterations etc.
-            self.initialize_solver_savefile(filename + 'solver/')
-
-        # Solve system (PDEs and ODEs)
-        for k in range(int(round(Tstop/float(self.dt)))):
-            # Start timer (ODE solve)
-            ts = time.perf_counter()
-
-            # -------------------------------------------------- #
-            # Solve ODEs active part of membrane
-            # -------------------------------------------------- #
-
-            # Update initial values and parameters in ODE solver
-            membrane_ode.set_membrane_potential(self.phi_M_prev_PDE)
-            membrane_ode.set_parameter('E_K', self.ion_list[0]['E'])
-            membrane_ode.set_parameter('E_Na', self.ion_list[-1]['E'])
-
-            # Solve ODEs
-            membrane_ode.step_lsoda(dt=dt_ode*self.params.n_steps_ODE, \
-                    stimulus=None, stimulus_locator=stimulus_locator)
-
-            # Update PDE functions based on ODE output
-            membrane_ode.get_membrane_potential(self.phi_M_prev_PDE)
-            membrane_ode.get_state('n', self.n_HH)
-            membrane_ode.get_state('m', self.m_HH)
-            membrane_ode.get_state('h', self.h_HH)
-
-            # -------------------------------------------------- #
-            # Solve ODEs passive part of membrane
-            # -------------------------------------------------- #
-
-            # Update initial values and parameters in passive model
-            membrane_leak.set_membrane_potential(self.phi_M_prev_PDE)
-            membrane_leak.set_parameter('E_K', self.ion_list[0]['E'])
-            membrane_leak.set_parameter('E_Na', self.ion_list[-1]['E'])
-
-            # Solve ODEs
-            membrane_leak.step_lsoda(dt=dt_ode*self.params.n_steps_ODE, \
-                    stimulus=stimulus, stimulus_locator=stimulus_locator)
-
-            # Update PDE functions based on ODE output
-            membrane_leak.get_membrane_potential(self.phi_M_prev_PDE)
-
-            # End timer (ODE solve)
-            te = time.perf_counter()
-            res = te - ts
-            print(f"{bcolors.OKGREEN} CPU Execution time ODE solve: {res:.4f} seconds {bcolors.ENDC}")
-
-            # Solve PDEs
-            self.solve_for_time_step(k, t)
-            #self.solve_for_time_step_picard(k, t)
-
-            # Save results
-            if (k % self.sf) == 0 and filename is not None:
-                self.save_h5()      # fields
-                self.save_solver(k) # solver statistics
-
-        # Close files
-        if filename is not None:
-            self.close_h5()
-            self.close_save_solver()
-
-        # Combine solution for the potential and concentrations
-        uh = split(self.c) + (self.phi,)
-
-        return uh
-
 if __name__ == "__main__":
 
     # Resolution factor of mesh
@@ -195,8 +33,8 @@ if __name__ == "__main__":
 
     # Time variables (PDEs)
     dt = 1.0e-4                      # global time step (s)
-    #Tstop = 1.0                     # global end time (s)
-    Tstop = 1.0e-2                   # global end time (s)
+    Tstop = 1.0e-3                   # global end time (s)
+    #Tstop = 2.0e-1                   # global end time (s)
     t = Constant(0.0)                # time constant
 
     # Time variables (ODEs)
@@ -222,14 +60,6 @@ if __name__ == "__main__":
     Cl_e_init = Constant(104)        # extracellular CL concentration
     phi_M_init = Constant(-0.067738) # membrane potential (V)
 
-    # Membrane parameters
-    g_Na_leak = Constant(1.0)        # Na leak conductivity (S/m**2)
-    g_K_leak = Constant(4.0)         # K leak conductivity (S/m**2)
-    g_Cl_leak = Constant(0.0)        # K leak conductivity (S/m**2)
-    g_Na_bar = 1200                  # Na max conductivity (S/m**2)
-    g_K_bar = 360                    # K max conductivity (S/m**2)
-    g_syn_bar = 40                   # synaptic conductivity (S/m**2)
-
     # Set parameters
     params = namedtuple('params', ('dt', 'n_steps_ODE', 'F', 'psi', \
             'phi_M_init', 'C_phi', 'C_M', 'R', 'temperature'))(dt, \
@@ -250,19 +80,16 @@ if __name__ == "__main__":
     # be the ion with the smallest diffusion coefficient
     ion_list = [K, Cl, Na]
 
-    # Membrane parameters
-    g_Na_bar = 1200                  # Na max conductivity (S/m**2)
-    g_K_bar = 360                    # K max conductivity (S/m**2)
-    g_syn_bar = 200                  # synaptic conductivity (S/m**2)
-    g_Na_leak = Constant(2.0*0.5)    # Na leak conductivity (S/m**2)
-    g_K_leak = Constant(8.0*0.5)     # K leak conductivity (S/m**2)
-    g_Cl_leak = Constant(0.0)        # K leak conductivity (S/m**2)
+    # synaptic conductivity (S/m**2)
+    g_syn_bar = 200
 
-    # Set membrane parameters
-    membrane_params = namedtuple('membrane_params', ('g_Na_bar',
-                                 'g_K_bar', 'g_Na_leak', 'g_K_leak', 'g_Cl_leak', \
-                                 'g_syn_bar'))(g_Na_bar, g_K_bar, g_Na_leak, \
-                                  g_K_leak, g_Cl_leak, g_syn_bar)
+    # set stimulus ODE
+    stimulus = {'stim_amplitude': g_syn_bar}
+    stimulus_locator = lambda x: (x[1] < -80e-6) or (x[0] < -125e-6) or (x[0] > 140e-6)
+
+    stim_params = namedtuple('membrane_params', ('g_syn_bar', \
+                             'stimulus', 'stimulus_locator'))(g_syn_bar, \
+                              stimulus, stimulus_locator)
 
     # Get mesh, subdomains, surfaces paths
     file_name = 'meshes/rat_neuron/228-16MG.CNG.xdmf'
@@ -329,8 +156,8 @@ if __name__ == "__main__":
     subdomains = cell_f
     surfaces = facet_f
 
-    File("meshes/rat_neuron/surfaces.pvd") << surfaces
-    File("meshes/rat_neuron/subdomains.pvd") << subdomains
+    with XDMFFile('results/data/rat_neuron/subdomains.xdmf') as xdmf:
+        xdmf.write(cell_f)
 
     # Set solver parameters (True is direct, and False is iterate)
     direct_emi = False
@@ -342,8 +169,13 @@ if __name__ == "__main__":
     # File for saving results
     fname = "results/data/rat_neuron/"
 
+    # Dictionary with membrane models (key is facet tag, value is ode model)
+    ode_models = {1: mm_leak, 2: mm_hh}
+
     # Solve system
-    S_1a = Solver3DRatNeuron(params, ion_list, degree_emi=1, degree_knp=1) # create solver
-    S_1a.setup_domain(mesh, subdomains, surfaces)                          # setup domains
-    S_1a.solve_system_active(Tstop, t, solver_params, membrane_params, \
-            filename=fname)                                                # solve
+    S = Solver(params, ion_list)                    # create solver
+    S.setup_domain(mesh, subdomains, surfaces)      # setup meshes
+    S.setup_parameters()                            # setup physical parameters
+    S.setup_FEM_spaces()                            # setup function spaces and numerical parameters
+    S.setup_membrane_model(stim_params, ode_models) # setup membrane model(s)
+    S.solve_system_active(Tstop, t, solver_params, filename=fname) # solve

@@ -112,32 +112,47 @@ if __name__ == '__main__':
         g_b = 1.0
         g_c = 1.0
 
+        # diffusion coefficients for each sub-domain
+        D_a_sub = {1:Constant(D_a1), 2:Constant(D_a2)}
+        D_b_sub = {1:Constant(D_b1), 2:Constant(D_b2)}
+        D_c_sub = {1:Constant(D_c1), 2:Constant(D_c2)}
+
+        # coupling coefficients for each sub-domain
+        C_a_sub = {1:Constant(C_a1), 2:Constant(C_a2)}
+        C_b_sub = {1:Constant(C_b1), 2:Constant(C_b2)}
+        C_c_sub = {1:Constant(C_c1), 2:Constant(C_c2)}
+
+        # initial concentrations for each sub-domain
+        a_init_sub = {1:ca1_init, 2:ca2_init}
+        b_init_sub = {1:cb1_init, 2:cb2_init}
+        c_init_sub = {1:cc1_init, 2:cc2_init}
+
         # create ions
-        ion_a = {'D1':D_a1, 'D2':D_a2,
+        ion_a = {'D_sub':D_a_sub,
                  'z':z_a,
-                 'c1_init': ca1_init, 'c2_init': ca2_init,
+                 'c_init_sub': a_init_sub,
                  'f1': fca1, 'f2': fca2,
                  'g_robin_1': g_robin_a1, 'g_robin_2': g_robin_a2,
                  'bdry':bdry_a,
-                 'C1': C_a1, 'C2': C_a2,
+                 'C_sub': C_a_sub,
                  'name':'Na'}
 
-        ion_b = {'D1':D_b1, 'D2':D_b2,
+        ion_b = {'D_sub':D_b_sub,
                  'z':z_b,
-                 'c1_init': cb1_init, 'c2_init': cb2_init,
+                 'c_init_sub': b_init_sub,
                  'f1': fcb1, 'f2': fcb2,
                  'g_robin_1': g_robin_b1, 'g_robin_2': g_robin_b2,
                  'bdry':bdry_b,
-                 'C1': C_b1, 'C2': C_b2,
+                 'C_sub': C_b_sub,
                  'name':'K'}
 
-        ion_c = {'D1':D_c1, 'D2':D_c2,
+        ion_c = {'D_sub':D_c_sub,
                  'z':z_c,
-                 'c1_init': cc1_init, 'c2_init': cc2_init,
+                 'c_init_sub': c_init_sub,
                  'f1': fcc1, 'f2': fcc2,
                  'g_robin_1': g_robin_c1, 'g_robin_2': g_robin_c2,
                  'bdry':bdry_c,
-                 'C1': C_c1, 'C2': C_c2,
+                 'C_sub': C_c_sub,
                  'name':'Cl'}
 
         # the final ion will be eliminated
@@ -166,7 +181,9 @@ if __name__ == '__main__':
         subdomains = MeshFunction('size_t', mesh, subdomains_path)
         surfaces = MeshFunction('size_t', mesh, surfaces_path)
 
-        S.setup_domain(mesh, subdomains, surfaces)
+        S.setup_domain(mesh, subdomains, surfaces)      # setup domain
+        S.setup_parameters()                            # setup physical parameters
+        S.setup_FEM_spaces()                            # setup function spaces and numerical parameters
 
         direct_emi = True
         direct_knp = True

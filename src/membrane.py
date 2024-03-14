@@ -11,6 +11,7 @@ class MembraneModel():
         Facets where facet_f[facet] == tag are governed by this ode whose 
         source terms will be taken from V
         '''
+
         mesh = facet_f.mesh()
         assert mesh.topology().dim()-1 == facet_f.dim()
         assert isinstance(tag, int)
@@ -29,8 +30,10 @@ class MembraneModel():
         self.nodes = nodes
 
         self.states = np.array([ode.init_state_values() for _ in range(nodes)])
+
         self.parameters = np.array([ode.init_parameter_values() for _ in range(nodes)])
 
+        self.tag = tag
         self.ode = ode
         self.prefix = ode.__name__
         self.time = 0
@@ -164,14 +167,14 @@ class MembraneModel():
             'state': (self.states, self.ode.state_indices),
             'parameter': (self.parameters, self.ode.parameter_indices)
         }[what]
-        
-        lidx = np.arange(self.nodes)        
+
+        lidx = np.arange(self.nodes)
         if locator is not None:
             lidx = lidx[np.fromiter(map(locator, self.dof_locations), dtype=bool)]
         df.info(f'\t{self.prefix} Set {what} for {len(lidx)} ODES')
 
         if len(lidx) == 0: return destination
-        
+
         coords = self.dof_locations[lidx]
         for param in value_dict:
             col = get_col(param)
@@ -185,14 +188,14 @@ class MembraneModel():
 if __name__ == '__main__':
     import tentusscher_panfilov_2006_M_cell as ode
     from facet_plot import vtk_plot
-    
+
     mesh = df.UnitSquareMesh(5, 5)
     V = df.FunctionSpace(mesh, 'Discontinuous Lagrange Trace', 0)
     u = df.Function(V)
 
     x, y = V.tabulate_dof_coordinates().T
     u.vector().set_local(np.where(x*(1-x)*y*(1-y) < 1E-10, 1, 0))
-    
+
     facet_f = df.MeshFunction('size_t', mesh, mesh.topology().dim()-1, 0)
     # df.DomainBoundary().mark(facet_f, 1)
     tag = 0
@@ -221,12 +224,13 @@ if __name__ == '__main__':
         vtk_plot(u, facet_f, (tag, ), path=f'test_ode_t{membrane.time}.vtk')        
 
     potential_history = np.array(potential_history)
-    
+
     import matplotlib.pyplot as plt
 
     plt.figure()
     plt.plot(potential_history[:, 2])
     plt.show()
+
     # TODO:
     # - consider a test where we have dy/dt = A(x)y with y(t=0) = y0
     # - after stepping u should be fine
