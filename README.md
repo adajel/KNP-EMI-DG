@@ -3,7 +3,7 @@
 ### About ###
 Code for solving the KNP-EMI problem using a DG fem method.
 
-solver.py: contains class for PDE solver. Contains the following files:
+- solver.py: contains class for PDE solver. Contains the following files:
 - membrane.py: containt class for solving ODEs at membrane and communication beteween PDE and ODE solver (e.g. membrane potential, src terms, etc.)
 - run_*.py files: scripts for running various simulations
     - run_mms_space.py: run MMS test in space
