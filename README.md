@@ -40,7 +40,7 @@ To setup environment, run:
 
     conda create --name <env> --file environment.txt
 
-### Usage ###
+### Reproduce results paper ###
 
 ```python
 
