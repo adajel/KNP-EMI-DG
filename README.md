@@ -23,6 +23,8 @@ following files:
 
 - make_mesh_*.py: scripts for generating idealized 2D and 3D meshes
 
+- make_mesh_*.py: scripts for generating figures
+
 ### Geometry ###
 
 The code assumes all ECS cells are tagged with 2 and ICS cells are tagged with
