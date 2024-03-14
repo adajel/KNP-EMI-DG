@@ -1,18 +1,21 @@
 # KNP-EMI-DG
 
 ### About ###
-Code for solving the KNP-EMI problem using a DG fem method.
+Code for solving the KNP-EMI problem using a DG fem method. Contains the
+following files:
 
-- solver.py: contains class for PDE solver. Contains the following files:
-- membrane.py: containt class for solving ODEs at membrane and communication beteween PDE and ODE solver (e.g. membrane potential, src terms, etc.)
-- run_*.py files: scripts for running various simulations
+- solver.py: class for PDE solver.
+- membrane.py: class for ODEs solver with functions for communication beteween PDE and ODE solver (e.g. membrane potential, src terms, etc.)
+- mm_*.py: spesification of membrane model (including all membrane parameters)
+    - mm_HH.py: Hodkin Huxley model
+    - mm_leak.py: leak model
+- run_*.py: scripts spesifying mesh, physical and numerical PDE parametersfor and for running various simulations
     - run_mms_space.py: run MMS test in space
     - run_2D.py: run simulation with HH in idealized 3D axons
     - run_3D.py: run simulation with HH in idealized 3D axons
-- mm_*.py files: spesification of membrane model (including all membrane parameters)
-    - mm_HH.py: Hodkin Huxley model
-    - mm_leak.py: leak model
-
+    - run_rat_neuron.py: run simulation with spatially varying membrane
+    mechanisms on realistic 3D geometry based on reconstruction of rat neuron
+- make_mesh_*.py: scripts for generating idealized 2D and 3D meshes
 ### Geometry ###
 
 The code assumes all ECS cells are tagged with 2 and ICS cells are tagged with
