@@ -1,4 +1,4 @@
-import dlt_dof_extraction_2 as dlt
+import dlt_dof_extraction as dlt
 import dolfin as df
 import numpy as np
 
