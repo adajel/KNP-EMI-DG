@@ -16,6 +16,7 @@ following files:
 - run_*.py: scripts for running various simulations. Contains PDE parameters
 (mesh, physical and numerical parameters)
     - run_mms_space.py: run MMS test in space
+    - run_mms_time.py: run MMS test in time
     - run_2D.py: run simulation with HH in idealized 3D axons
     - run_3D.py: run simulation with HH in idealized 3D axons
     - run_rat_neuron.py: run simulation with spatially varying membrane
@@ -48,13 +49,17 @@ To setup environment, run:
 python run_MMS_space.py
 
 # run MMS test in space
-python run_MMS_tim.py
+python run_MMS_time.py
 
 # run simulation on idealized 2D geometry
 python run_2D.py
 
 # run simulation on idealized 3D geometry
 python run_3D.py
+
+# run simulation on realistic 3D geometry of rat neuron
+python run_rat_neuron.py
+
 ```
 
 ### License ###
