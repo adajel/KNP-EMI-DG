@@ -1,8 +1,9 @@
 # KNP-EMI-DG
 
 ### About ###
-Code for solving the KNP--EMI problem using a DG fem method. Contains the
-following files:
+Code for solving the KNP--EMI problem using a DG fem method.
+
+### Files ###
 
 - solver.py: class for PDE solver.
 
