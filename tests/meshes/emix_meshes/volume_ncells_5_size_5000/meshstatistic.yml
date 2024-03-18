@@ -1,0 +1,69 @@
+cell_surface:
+- !!python/object/apply:numpy.core.multiarray.scalar
+  - &id001 !!python/object/apply:numpy.dtype
+    args:
+    - f8
+    - false
+    - true
+    state: !!python/tuple
+    - 3
+    - <
+    - null
+    - null
+    - null
+    - -1
+    - -1
+    - 0
+  - !!binary |
+    +OTUoWW0bUE=
+- !!python/object/apply:numpy.core.multiarray.scalar
+  - *id001
+  - !!binary |
+    5TTfXwJHeEE=
+- !!python/object/apply:numpy.core.multiarray.scalar
+  - *id001
+  - !!binary |
+    EJBilj4pjUE=
+- !!python/object/apply:numpy.core.multiarray.scalar
+  - *id001
+  - !!binary |
+    HcWlU1DYmEE=
+- !!python/object/apply:numpy.core.multiarray.scalar
+  - *id001
+  - !!binary |
+    6H0uN65QeEE=
+cell_volume:
+- !!python/object/apply:numpy.core.multiarray.scalar
+  - *id001
+  - !!binary |
+    jlGdadn45EE=
+- !!python/object/apply:numpy.core.multiarray.scalar
+  - *id001
+  - !!binary |
+    Bq1SSuW35UE=
+- !!python/object/apply:numpy.core.multiarray.scalar
+  - *id001
+  - !!binary |
+    XQxS0cNwF0I=
+- !!python/object/apply:numpy.core.multiarray.scalar
+  - *id001
+  - !!binary |
+    nOxlBi7JBEI=
+- !!python/object/apply:numpy.core.multiarray.scalar
+  - *id001
+  - !!binary |
+    +kACcsXH6EE=
+ecs_share: !!python/object/apply:numpy.core.multiarray.scalar
+- *id001
+- !!binary |
+  sv9OqNV94j8=
+ecs_surface: !!python/object/apply:numpy.core.multiarray.scalar
+- *id001
+- !!binary |
+  SZ5r/76osEE=
+ecs_volume: !!python/object/apply:numpy.core.multiarray.scalar
+- *id001
+- !!binary |
+  fDLS/PXtLEI=
+ncompcells: 165211
+npoints: 30315
