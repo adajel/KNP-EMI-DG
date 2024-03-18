@@ -174,8 +174,8 @@ if __name__ == '__main__':
 
         # generate mesh if it does not exist
         if not os.path.isfile(mesh_path):
-            script = 'make_mesh_MMS.py '                           # script path
-            os.system('python3 ' + script + ' ' + str(resolution)) # run script
+            from make_mesh_MMS import main
+            main(["-r", str(resolution), "-d", mesh_prefix])
 
         mesh = Mesh(mesh_path)
         subdomains = MeshFunction('size_t', mesh, subdomains_path)
