@@ -12,4 +12,4 @@ dependencies:
   - mpich
   - conda-ecosystem-user-package-isolation
   - pip:
-      - "git+https://github.com/MiroK/ulfy.git"
+      - "ulfy@git+https://github.com/MiroK/ulfy.git"
