@@ -1,0 +1,19 @@
+[project]
+name = "KNP-EMI-DG"
+version = "0.0.1"
+requires-python = ">=3.8"
+
+# Path to README.md
+readme = "README.md"
+
+# Path to license file
+license = { file = "LICENSE" }
+
+# Direct dependencies
+dependencies = [
+    'numbalsoda',
+    'numpy',
+    'numba',
+    'matplotlib',
+    'ulfy@git+https://github.com/MiroK/ulfy.git',
+]
