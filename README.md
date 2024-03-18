@@ -55,14 +55,12 @@ python run_rat_neuron.py
 
 ### Geometry ###
 
-The code assumes all ECS cells are tagged with 2 and ICS cells are tagged with
-1, and that all interior facets are tagged with 0. The membrane
+The code assumes ECS cells are tagged with 0 and ICS cells are tagged with
+1,2,3, ... and that all interior facets are tagged with 0. The membrane
 potential is defined as phi_i - phi_e (i.e. phi_1 - phi_2). Since we have
-marked cell in ECS with 2 and cells in ICS with 1 we have an interface
-normal pointing inwards. In general, normals will always point from higher to
-lower (e.g. from 2 -> 1)
-
-
+marked cell in ECS with 0 and cells in ICS with 1 we have an interface
+normal pointing inwards. In general, normals will always point from lower to
+higher (e.g. from 0 -> 1)
 
 ### License ###
 
