@@ -18,6 +18,7 @@ jobs:
   test_scripts:
     runs-on: ubuntu-latest
     container: ghcr.io/scientificcomputing/fenics:2023-04-21
+    # Use older DOLFIN image, due to ulfy using ufl directly
 
     steps:
       - uses: actions/checkout@v4

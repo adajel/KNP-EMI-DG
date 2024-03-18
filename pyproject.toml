@@ -7,7 +7,7 @@ requires-python = ">=3.8"
 readme = "README.md"
 
 # Path to license file
-license = {file = "LICENSE"}
+license = { file = "LICENSE" }
 
 # Direct dependencies
 dependencies = [
