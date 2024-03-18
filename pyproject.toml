@@ -11,9 +11,9 @@ license = {file = "LICENSE"}
 
 # Direct dependencies
 dependencies = [
-    'numbalsoda'
-    'numpy'
-    'numba'
+    'numbalsoda',
+    'numpy',
+    'numba',
     'matplotlib',
     'git+https://github.com/MiroK/ulfy.git'
 ]
