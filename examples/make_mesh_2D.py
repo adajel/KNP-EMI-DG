@@ -82,8 +82,8 @@ surfacesfile = File(dir_path + 'surfaces_' + str(resolution_factor) + '.xml')
 surfacesfile << surfaces
 
 # save .pvd files
-meshplot = File(dir_path + 'subdomains_' + str(resolution_factor) + '.pvd')
-meshplot << subdomains
+#meshplot = File(dir_path + 'subdomains_' + str(resolution_factor) + '.pvd')
+#meshplot << subdomains
 
-surfacesplot = File(dir_path + 'surfaces_' + str(resolution_factor) + '.pvd')
-surfacesplot << surfaces
+#surfacesplot = File(dir_path + 'surfaces_' + str(resolution_factor) + '.pvd')
+#surfacesplot << surfaces

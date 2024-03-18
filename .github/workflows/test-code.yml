@@ -34,4 +34,4 @@ jobs:
 
       - name: Run test (MMS)
         run: |
-          python ./src/run_MMS_space.py
+          python ./tests/run_MMS_space.py
