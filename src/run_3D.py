@@ -65,14 +65,14 @@ if __name__ == "__main__":
                     n_steps_ODE, F, psi, phi_M_init, C_phi, C_M, R, temperature)
 
         # diffusion coefficients for each sub-domain
-        D_Na_sub = {1:D_Na, 2:D_Na}
-        D_K_sub = {1:D_K, 2:D_K}
-        D_Cl_sub = {1:D_Cl, 2:D_Cl}
+        D_Na_sub = {1:D_Na, 0:D_Na}
+        D_K_sub = {1:D_K, 0:D_K}
+        D_Cl_sub = {1:D_Cl, 0:D_Cl}
 
         # initial concentrations for each sub-domain
-        Na_init_sub = {1:Na_i_init, 2:Na_e_init}
-        K_init_sub = {1:K_i_init, 2:K_e_init}
-        Cl_init_sub = {1:Cl_i_init, 2:Cl_e_init}
+        Na_init_sub = {1:Na_i_init, 0:Na_e_init}
+        K_init_sub = {1:K_i_init, 0:K_e_init}
+        Cl_init_sub = {1:Cl_i_init, 0:Cl_e_init}
 
         # Create ions (channel conductivity is set below in the membrane model)
         Na = {'c_init_sub':Na_init_sub, 'bdry': Constant((0, 0)),

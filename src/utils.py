@@ -76,8 +76,8 @@ def interface_normal(subdomains, mesh):
     n, hA = df.FacetNormal(mesh), df.FacetArea(mesh)
     n_ = df.Function(V)  # Our oriented normal
     # FEniCS will orient the normal form '+' to '-'. This is what we want
-    # if the plus side is greate than minus side
-    switch = df.conditional(df.ge(chi('+'), chi('-')), n('+'), n('-'))
+    # if the plus side is greater than minus side
+    switch = df.conditional(df.ge(chi('+'), chi('-')), n('-'), n('+'))
     # Here we do L^2 projection to get the normal
     df.assemble((1/df.avg(hA))*df.inner(switch, v('+'))*df.dS + (1/hA)*df.inner(n, v)*df.ds,
                 n_.vector())

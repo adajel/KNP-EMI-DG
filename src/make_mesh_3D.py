@@ -60,7 +60,7 @@ nz = 9 * 2 ** resolution_factor
 
 # box mesh
 mesh = BoxMesh(Point(0, 0.0, 0.0), Point(l * 16, 0.9, 0.9), nx, ny, nz)
-subdomains = MeshFunction("size_t", mesh, mesh.topology().dim(), 2)
+subdomains = MeshFunction("size_t", mesh, mesh.topology().dim(), 0)
 surfaces = MeshFunction("size_t", mesh, mesh.topology().dim() - 1, 0)
 
 a = Point(5, 0.2, 0.2)

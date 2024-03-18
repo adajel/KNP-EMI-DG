@@ -141,16 +141,13 @@ class Solver:
         self.phi_M_init = params.phi_M_init             # initial membrane potential
         self.psi = self.F/(self.R*self.temperature)     # shorthand
 
-        # define global diffusion coefficients
         for idx, ion in enumerate(self.ion_list):
-
-            # project diffusion coefficients to PK based on subdomain
+            # define global diffusion coefficients (for each ion)
             D = self.make_global(ion['D_sub'])
             ion['D'] = D
 
-            # define global coupling coefficient (for MMS case)
+            # define global coupling coefficient (for MMS case, for each ion)
             if self.mms is not None:
-                # project coupling coefficients to PK based on subdomain
                 C = self.make_global(ion['C_sub'])
                 ion['C'] = C
 
@@ -202,13 +199,13 @@ class Solver:
         return
 
 
-    def setup_membrane_model(self, stim_params, ode_models):
+    def setup_membrane_model(self, stim_params, odes):
         """
-        Initiate membrane models that contains membrane mechanisms (passive
-        dynamics / ODEs, and src terms for PDE system)
+        Initiate membrane model(s) containing membrane mechanisms (passive
+        dynamics / ODEs) and src terms for PDE system and stimulus
         """
 
-        # set membrane parameters
+        # set stimulus parameters
         self.stimulus = stim_params.stimulus                 # stimulus
         self.stimulus_locator = stim_params.stimulus_locator # locator for stimulus
 
@@ -216,29 +213,26 @@ class Solver:
         self.mem_models = []
 
         # initialize and append ode models
-        for tag, ode_model in ode_models.items():
+        for tag, ode in odes.items():
             # Initialize ODE model
-            mem_ode_model = MembraneModel(ode_model, facet_f=self.surfaces, tag=tag, V=self.Q)
+            ode_model = MembraneModel(ode, facet_f=self.surfaces, tag=tag, V=self.Q)
 
             # Set ODE capacitance (to ensure same values are used)
-            mem_ode_model.set_parameter_values({'Cm': lambda x: self.params.C_M})
+            ode_model.set_parameter_values({'Cm': lambda x: self.params.C_M})
 
             # Initialize src terms for PDE step
             I_ch_k = {} # dictionary for ion specific currents
 
             for ion in self.ion_list:
-
                 # function for src term pde
                 I_ch_k_ = Function(self.Q)
-
                 # set src terms pde
-                mem_ode_model.get_parameter("I_ch_" + ion['name'], I_ch_k_)
-
+                ode_model.get_parameter("I_ch_" + ion['name'], I_ch_k_)
                 # set function in dictionary
                 I_ch_k[ion['name']] = I_ch_k_
 
             # define membrane model (with ode model and src terms for PDEs)
-            mem_model = {'ode': mem_ode_model, 'I_ch_k': I_ch_k}
+            mem_model = {'ode': ode_model, 'I_ch_k': I_ch_k}
 
             # append to list of membrane models
             self.mem_models.append(mem_model)

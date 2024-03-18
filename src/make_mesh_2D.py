@@ -54,7 +54,7 @@ ny = 2*2**resolution_factor
 
 # box mesh
 mesh = RectangleMesh(Point(0, 0), Point(62, 4), nx, ny, "crossed")
-subdomains = MeshFunction('size_t', mesh, mesh.topology().dim(), 2)
+subdomains = MeshFunction('size_t', mesh, mesh.topology().dim(), 0)
 surfaces = MeshFunction('size_t', mesh, mesh.topology().dim()-1, 0)
 
 # add interior domains (cells)
