@@ -8,7 +8,6 @@ This script generates a 2D unit square mesh with a cell at [0.25,
 from dolfin import *
 import sys
 
-
 class Top(SubDomain):
     # define exterior boundary
     def inside(self, x, on_boundary):
@@ -35,7 +34,6 @@ class RightSide(SubDomain):
 
 import argparse
 from pathlib import Path
-
 
 class CustomParser(
     argparse.ArgumentDefaultsHelpFormatter, argparse.RawDescriptionHelpFormatter

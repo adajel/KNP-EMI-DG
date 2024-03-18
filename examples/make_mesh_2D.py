@@ -43,47 +43,64 @@ def add_rectangle(mesh, subdomains, surfaces, a, b):
         side_4 = (near(x[1], b[1]) and a[0] <= x[0] <= b[0])
         surfaces[facet] += side_1 or side_2 or side_3 or side_4
 
-# if no input argument, set resolution factor to default
-if len(sys.argv) == 1:
-    resolution_factor = 0
-else:
-    resolution_factor = int(sys.argv[1])
+import argparse
+from pathlib import Path
 
-nx = 31*2**resolution_factor
-ny = 2*2**resolution_factor
+class CustomParser(
+    argparse.ArgumentDefaultsHelpFormatter, argparse.RawDescriptionHelpFormatter
+): ...
 
-# box mesh
-mesh = RectangleMesh(Point(0, 0), Point(62, 4), nx, ny, "crossed")
-subdomains = MeshFunction('size_t', mesh, mesh.topology().dim(), 0)
-surfaces = MeshFunction('size_t', mesh, mesh.topology().dim()-1, 0)
+def main(argv=None):
+    parser = argparse.ArgumentParser(formatter_class=CustomParser)
+    parser.add_argument(
+        "-r",
+        "--resolution",
+        dest="resolution_factor",
+        default=0,
+        type=int,
+        help="Mesh resolution factor",
+    )
+    parser.add_argument(
+        "-d",
+        "--directory",
+        dest="mesh_dir",
+        type=Path,
+        default=Path("meshes/MMS"),
+        help="Directory to save the mesh",
+    )
+    args = parser.parse_args(argv)
+    resolution_factor = args.resolution_factor
+    out_dir = args.mesh_dir
 
-# add interior domains (cells)
-a = Point(1, 1)    # bottom left of interior domain
-b = Point(61, 3)   # top right of interior domain
-add_rectangle(mesh, subdomains, surfaces, a, b)
+    nx = 31*2**resolution_factor
+    ny = 2*2**resolution_factor
 
-# mark exterior boundary
-Boundary().mark(surfaces, 5)
+    # box mesh
+    mesh = RectangleMesh(Point(0, 0), Point(62, 4), nx, ny, "crossed")
+    subdomains = MeshFunction('size_t', mesh, mesh.topology().dim(), 0)
+    surfaces = MeshFunction('size_t', mesh, mesh.topology().dim()-1, 0)
 
-# convert mesh to unit meter (m)
-mesh.coordinates()[:,:] *= 1e-6
+    # add interior domains (cells)
+    a = Point(1, 1)    # bottom left of interior domain
+    b = Point(61, 3)   # top right of interior domain
+    add_rectangle(mesh, subdomains, surfaces, a, b)
 
-# path to directory where mesh files are saved
-dir_path = 'meshes/2D/'
+    # mark exterior boundary
+    Boundary().mark(surfaces, 5)
 
-# save .xml files
-meshfile = File(dir_path + 'mesh_' + str(resolution_factor) + '.xml')
-meshfile << mesh
+    # convert mesh to unit meter (m)
+    mesh.coordinates()[:,:] *= 1e-6
 
-subdomainsfile = File(dir_path + 'subdomains_' + str(resolution_factor) + '.xml')
-subdomainsfile << subdomains
+    # save .xml files
+    mesh_file = File(str((out_dir / f"mesh_{resolution_factor}.xml").absolute()))
+    mesh_file << mesh
 
-surfacesfile = File(dir_path + 'surfaces_' + str(resolution_factor) + '.xml')
-surfacesfile << surfaces
+    subdomains_file = File(
+        str((out_dir / f"subdomains_{resolution_factor}.xml").absolute())
+    )
+    subdomains_file << subdomains
 
-# save .pvd files
-#meshplot = File(dir_path + 'subdomains_' + str(resolution_factor) + '.pvd')
-#meshplot << subdomains
-
-#surfacesplot = File(dir_path + 'surfaces_' + str(resolution_factor) + '.pvd')
-#surfacesplot << surfaces
+    surfaces_file = File(
+        str((out_dir / f"surfaces_{resolution_factor}.xml").absolute())
+    )
+    surfaces_file << surfaces

@@ -9,7 +9,7 @@ import numpy as np
 
 from collections import namedtuple
 
-from solver import Solver
+from knpemidg import Solver
 import mm_hh as mm_hh
 
 # Define colors for printing
@@ -99,28 +99,22 @@ if __name__ == "__main__":
 
         # Get mesh, subdomains, surfaces paths
         mesh_prefix = "meshes/3D/"
-        mesh = mesh_prefix + "mesh_" + str(resolution) + ".xml"
-        subdomains = mesh_prefix + "subdomains_" + str(resolution) + ".xml"
-        surfaces = mesh_prefix + "surfaces_" + str(resolution) + ".xml"
+        mesh_path = mesh_prefix + "mesh_" + str(resolution) + ".xml"
+        subdomains_path = mesh_prefix + "subdomains_" + str(resolution) + ".xml"
+        surfaces_path = mesh_prefix + "surfaces_" + str(resolution) + ".xml"
 
         # Generate mesh if it does not exist
-        if not os.path.isfile(mesh):
-            script = "make_mesh_3D.py"                 # script
-            os.system("python " + script + " " + str(resolution)) # run script
+        if not os.path.isfile(mesh_path):
+            from make_mesh_3D import main
+            main(["-r", str(resolution), "-d", mesh_prefix])
 
-        mesh = Mesh(mesh)
-        subdomains = MeshFunction('size_t', mesh, subdomains)
-        surfaces = MeshFunction('size_t', mesh, surfaces)
-
-        File("results/data/3D/surfaces.pvd") << surfaces
-        File("results/data/3D/subdomains.pvd") << subdomains
+        mesh = Mesh(mesh_path)
+        subdomains = MeshFunction('size_t', mesh, subdomains_path)
+        surfaces = MeshFunction('size_t', mesh, surfaces_path)
 
         # Set solver parameters (True is direct, and False is iterate)
         direct_emi = False
         direct_knp = False
-
-        #direct_emi = True
-        #direct_knp = True
 
         # Set solver parameters
         solver_params = namedtuple('solver_params', ('direct_emi',

@@ -9,9 +9,7 @@ import time
 import math as ma
 import numpy as np
 
-import matplotlib.pyplot as plt
-
-from solver import Solver
+from knpemidg import Solver
 import mm_hh as mm_hh
 
 # define colors for printing
@@ -101,19 +99,19 @@ if __name__=='__main__':
 
         # Get mesh, subdomains, surfaces paths
         here = os.path.abspath(os.path.dirname(__file__))
-        mesh_prefix_C1 = os.path.join(here, 'meshes/2D/')
-        mesh_C1 = mesh_prefix_C1 + 'mesh_' + str(resolution) + '.xml'
-        subdomains_C1 = mesh_prefix_C1 + 'subdomains_' + str(resolution) + '.xml'
-        surfaces_C1 = mesh_prefix_C1 + 'surfaces_' + str(resolution) + '.xml'
+        mesh_prefix = os.path.join(here, 'meshes/2D/')
+        mesh_path = mesh_prefix + 'mesh_' + str(resolution) + '.xml'
+        subdomains_path = mesh_prefix + 'subdomains_' + str(resolution) + '.xml'
+        surfaces_path = mesh_prefix + 'surfaces_' + str(resolution) + '.xml'
 
         # generate mesh if it does not exist
-        if not os.path.isfile(mesh_C1):
-            script_C1 = 'make_mesh_2D.py '                # script
-            os.system('python3 ' + script_C1 + ' ' + str(resolution)) # run script
+        if not os.path.isfile(mesh_path):
+            from make_mesh_2D import main
+            main(["-r", str(resolution), "-d", mesh_prefix])
 
-        mesh = Mesh(mesh_C1)
-        subdomains = MeshFunction('size_t', mesh, subdomains_C1)
-        surfaces = MeshFunction('size_t', mesh, surfaces_C1)
+        mesh = Mesh(mesh_path)
+        subdomains = MeshFunction('size_t', mesh, subdomains_path)
+        surfaces = MeshFunction('size_t', mesh, surfaces_path)
 
         # Set solver parameters (True is direct, and False is iterate)
         direct_emi = False

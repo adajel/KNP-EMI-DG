@@ -46,59 +46,78 @@ def add_axon(mesh, subdomains, surfaces, a, b):
 
     return
 
+import argparse
+from pathlib import Path
 
-# if no input argument, set resolution factor to default
-if len(sys.argv) == 1:
-    resolution_factor = 0
-else:
-    resolution_factor = int(sys.argv[1])
 
-l = 2
-nx = l * 16 * 2 ** resolution_factor
-ny = 9 * 2 ** resolution_factor
-nz = 9 * 2 ** resolution_factor
+class CustomParser(
+    argparse.ArgumentDefaultsHelpFormatter, argparse.RawDescriptionHelpFormatter
+): ...
 
-# box mesh
-mesh = BoxMesh(Point(0, 0.0, 0.0), Point(l * 16, 0.9, 0.9), nx, ny, nz)
-subdomains = MeshFunction("size_t", mesh, mesh.topology().dim(), 0)
-surfaces = MeshFunction("size_t", mesh, mesh.topology().dim() - 1, 0)
+def main(argv=None):
+    parser = argparse.ArgumentParser(formatter_class=CustomParser)
+    parser.add_argument(
+        "-r",
+        "--resolution",
+        dest="resolution_factor",
+        default=0,
+        type=int,
+        help="Mesh resolution factor",
+    )
+    parser.add_argument(
+        "-d",
+        "--directory",
+        dest="mesh_dir",
+        type=Path,
+        default=Path("meshes/MMS"),
+        help="Directory to save the mesh",
+    )
+    args = parser.parse_args(argv)
+    resolution_factor = args.resolution_factor
+    out_dir = args.mesh_dir
 
-a = Point(5, 0.2, 0.2)
-b = Point(l * 16 - 5, 0.4, 0.4)
-add_axon(mesh, subdomains, surfaces, a, b)
+    l = 2
+    nx = l * 16 * 2 ** resolution_factor
+    ny = 9 * 2 ** resolution_factor
+    nz = 9 * 2 ** resolution_factor
 
-a = Point(5, 0.5, 0.5)
-b = Point(l * 16 - 5, 0.7, 0.7)
-add_axon(mesh, subdomains, surfaces, a, b)
+    # box mesh
+    mesh = BoxMesh(Point(0, 0.0, 0.0), Point(l * 16, 0.9, 0.9), nx, ny, nz)
+    subdomains = MeshFunction("size_t", mesh, mesh.topology().dim(), 0)
+    surfaces = MeshFunction("size_t", mesh, mesh.topology().dim() - 1, 0)
 
-a = Point(5, 0.5, 0.2)
-b = Point(l * 16 - 5, 0.7, 0.4)
-add_axon(mesh, subdomains, surfaces, a, b)
+    a = Point(5, 0.2, 0.2)
+    b = Point(l * 16 - 5, 0.4, 0.4)
+    add_axon(mesh, subdomains, surfaces, a, b)
 
-a = Point(5, 0.2, 0.5)
-b = Point(l * 16 - 5, 0.4, 0.7)
-add_axon(mesh, subdomains, surfaces, a, b)
+    a = Point(5, 0.5, 0.5)
+    b = Point(l * 16 - 5, 0.7, 0.7)
+    add_axon(mesh, subdomains, surfaces, a, b)
 
-# mark exterior boundary
-Boundary().mark(surfaces, 5)
+    a = Point(5, 0.5, 0.2)
+    b = Point(l * 16 - 5, 0.7, 0.4)
+    add_axon(mesh, subdomains, surfaces, a, b)
 
-# convert mesh to unit meter (m)
-mesh.coordinates()[:, :] *= 1e-6
+    a = Point(5, 0.2, 0.5)
+    b = Point(l * 16 - 5, 0.4, 0.7)
+    add_axon(mesh, subdomains, surfaces, a, b)
 
-# path to directory where mesh files are saved
-dir_path = "meshes/" + "3D/"
+    # mark exterior boundary
+    Boundary().mark(surfaces, 5)
 
-meshfile = File(dir_path + "mesh_" + str(resolution_factor) + ".xml")
-meshfile << mesh
+    # convert mesh to unit meter (m)
+    mesh.coordinates()[:, :] *= 1e-6
 
-subdomains_file = File(dir_path + "subdomains_" + str(resolution_factor) + ".xml")
-subdomains_file << subdomains
+    # save .xml files
+    mesh_file = File(str((out_dir / f"mesh_{resolution_factor}.xml").absolute()))
+    mesh_file << mesh
 
-surfaces_file = File(dir_path + "surfaces_" + str(resolution_factor) + ".xml")
-surfaces_file << surfaces
+    subdomains_file = File(
+        str((out_dir / f"subdomains_{resolution_factor}.xml").absolute())
+    )
+    subdomains_file << subdomains
 
-meshplot = File(dir_path + "subdomains_" + str(resolution_factor) + ".pvd")
-meshplot << subdomains
-
-surfacesplot = File(dir_path + "surfaces_" + str(resolution_factor) + ".pvd")
-surfacesplot << surfaces
+    surfaces_file = File(
+        str((out_dir / f"surfaces_{resolution_factor}.xml").absolute())
+    )
+    surfaces_file << surfaces
