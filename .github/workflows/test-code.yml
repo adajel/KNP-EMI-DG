@@ -32,6 +32,10 @@ jobs:
           use-mamba: true
           environment-file: environment.yml
 
+      - name: install package
+        run: |
+          python3 -m pip install -e .
+
       - name: Run test (MMS)
         run: |
           python ./tests/run_MMS_space.py
