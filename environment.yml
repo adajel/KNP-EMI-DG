@@ -9,5 +9,6 @@ dependencies:
   - numbalsoda
   - numpy
   - numba
+  - mpich
   - pip:
       - "git+https://github.com/MiroK/ulfy.git"
