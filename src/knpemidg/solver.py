@@ -5,11 +5,10 @@ import os
 import time
 from petsc4py import PETSc
 
-from utils import pcws_constant_project
-from utils import interface_normal, plus, minus
-from utils import CellCenterDistance
-
-from membrane import MembraneModel
+from knpemidg.utils import pcws_constant_project
+from knpemidg.utils import interface_normal, plus, minus
+from knpemidg.utils import CellCenterDistance
+from knpemidg.membrane import MembraneModel
 
 # define jump across the membrane (interface gamma)
 JUMP = lambda f, n: minus(f, n) - plus(f, n)

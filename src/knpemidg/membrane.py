@@ -1,4 +1,4 @@
-import dlt_dof_extraction as dlt
+import knpemidg.dlt_dof_extraction as dlt
 import dolfin as df
 import numpy as np
 
