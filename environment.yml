@@ -1,0 +1,13 @@
+name: KNP-EMI
+channels:
+  - conda-forge
+dependencies:
+  - fenics-dolfin
+  - matplotlib
+  - python=3.10
+  - git
+  - numbalsoda
+  - numpy
+  - numba
+  - pip:
+      - "git+https://github.com/MiroK/ulfy.git"
