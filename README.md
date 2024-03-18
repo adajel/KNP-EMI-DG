@@ -1,17 +1,33 @@
 # KNP-EMI-DG
 
-### About ###
+### About
+
 Code for solving the KNP--EMI problem using a DG fem method.
 
-### Dependencies code ###
+### Dependencies code
 
-To setup environment, run:
+All dependencies are listed in [environment.yml](./environment.yml).
+To create an environment with these dependencies use either `conda` or `mamba` and run
 
-    conda create --name <env> --file environment.txt
+```bash
+conda env create -f environment.yml
+```
 
-### Reproduce results paper ###
+or
 
-```python
+```bash
+mamba env create -f environment.yml
+```
+
+Then call
+
+```bash
+conda activate KNP-EMI
+```
+
+### Reproduce results paper
+
+```bash
 
 # run MMS test in space
 python run_MMS_space.py
@@ -30,30 +46,32 @@ python run_rat_neuron.py
 
 ```
 
-### Files ###
+### Files
 
-- solver.py: class for PDE solver.
+- [solver.py](./src/solver.py): class for PDE solver.
 
-- membrane.py: class for membrane model (ODE stepping, functions for communication
-        between PDE and ODE solver etc.).
+- [membrane.py](./src/membrane.py): class for membrane model (ODE stepping, functions for communication
+  between PDE and ODE solver etc.).
 
-- mm_*.py: spesification of membrane model (including all membrane parameters)
-    - mm_HH.py: Hodkin Huxley model (with ODEs)
-    - mm_leak.py: passive leak model (no ODEs)
+- `mm\_\*.py`: spesification of membrane model (including all membrane parameters)
 
-- run_*.py: scripts for running various simulations. Contains PDE parameters
-(mesh, physical and numerical parameters)
-    - run_mms_space.py: MMS test in space
-    - run_mms_time.py: MMS test in time
-    - run_2D.py: simulation with Hodkin Huxley dynamics in idealized 3D axons
-    - run_3D.py: simulation with Hodkin Huxley dynamics in idealized 3D axons
-    - run_rat_neuron.py: simulation with spatially varying membrane mechanisms in realistic 3D geometry
+  - [mm_hh.py](./src/mm_hh.py): Hodkin Huxley model (with ODEs)
+  - [mm_leak.py](./src/mm_leak.py): passive leak model (no ODEs)
 
-- make_mesh_*.py: scripts for generating idealized 2D and 3D meshes
+- run\_\*.py: scripts for running various simulations. Contains PDE parameters
+  (mesh, physical and numerical parameters)
 
-- make_mesh_*.py: scripts for generating figures
+  - [run_MMS_space.py](./src/run_MMS_space.py): MMS test in space
+  - [run_MMS_time.py](./src/run_MMS_time.py): MMS test in time
+  - [run_2D.py](./src/run_2D.py): simulation with Hodkin Huxley dynamics in idealized 3D axons
+  - [run_3D.py](./src/run_3D.py): simulation with Hodkin Huxley dynamics in idealized 3D axons
+  - [run_rat_neuron.py](./src/run_rat_neuron.py): simulation with spatially varying membrane mechanisms in realistic 3D geometry
 
-### Geometry ###
+- `make*mesh*\*.py`: scripts for generating idealized 2D and 3D meshes
+
+- `make*mesh*\*.py`: scripts for generating figures
+
+### Geometry
 
 The code assumes ECS cells are tagged with 0 and ICS cells are tagged with
 1,2,3, ... and that all interior facets are tagged with 0. The membrane
@@ -62,13 +80,13 @@ marked cell in ECS with 0 and cells in ICS with 1 we have an interface
 normal pointing inwards. In general, normals will always point from lower to
 higher (e.g. from 0 -> 1)
 
-### License ###
+### License
 
 The software is free: you can redistribute it and/or modify it under the terms
 of the GNU Lesser General Public License as published by the Free Software
 Foundation, either version 3 of the License, or (at your option) any later
 version.
 
-### Community ###
+### Community
 
 Contact ada@simula.no for questions or to report issues with the software.

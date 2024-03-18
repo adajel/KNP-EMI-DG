@@ -10,5 +10,6 @@ dependencies:
   - numpy
   - numba
   - mpich
+  - conda-ecosystem-user-package-isolation
   - pip:
       - "git+https://github.com/MiroK/ulfy.git"
