@@ -337,7 +337,7 @@ class Solver:
 
             # MMS specific: add source terms
             L += inner(fphi1, v_phi)*dx(1) \
-               + inner(fphi2, v_phi)*dx(2) \
+               + inner(fphi2, v_phi)*dx(0) \
 
             # MMS specific: we don't have normal cont. of I_M across interface
             L += sum(inner(g_flux_cont[tag], plus(v_phi, n_g)) * dS(tag) for tag in lm_tags)
@@ -616,13 +616,13 @@ class Solver:
                 g_robin_knp_2 = ion['g_robin_2']
 
                 # get global coupling coefficients
-                C = ion['C']; C_1 = ion['C_sub'][1]; C_2 = ion['C_sub'][2]
+                C = ion['C']; C_1 = ion['C_sub'][1]; C_2 = ion['C_sub'][0]
 
                 lm_tags = self.lm_tags
 
                 # MMS specific: add source terms
                 L += inner(fc1, v_c)*dx(1) \
-                   + inner(fc2, v_c)*dx(2) \
+                   + inner(fc2, v_c)*dx(0) \
 
                 # coupling terms on interface gamma
                 L += - sum(jump(phi) * jump(C) * avg(v_c) * dS(tag) for tag in lm_tags) \

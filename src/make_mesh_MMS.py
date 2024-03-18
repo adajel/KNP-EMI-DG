@@ -50,8 +50,9 @@ in_interior = """ (x[0] >= %g && x[0] <= %g &&
 
 interior = CompiledSubDomain(in_interior)
 
-# mark interior (1) and exterior domain (2)
-subdomains = MeshFunction('size_t', mesh, mesh.topology().dim(), 2)
+# mark interior (1) and exterior domain (0)
+#subdomains = MeshFunction('size_t', mesh, mesh.topology().dim(), 2)
+subdomains = MeshFunction('size_t', mesh, mesh.topology().dim(), 0)
 for cell in cells(mesh):
     x = cell.midpoint().array()
     if interior.inside(x, False):

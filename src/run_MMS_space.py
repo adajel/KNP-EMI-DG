@@ -113,19 +113,19 @@ if __name__ == '__main__':
         g_c = 1.0
 
         # diffusion coefficients for each sub-domain
-        D_a_sub = {1:Constant(D_a1), 2:Constant(D_a2)}
-        D_b_sub = {1:Constant(D_b1), 2:Constant(D_b2)}
-        D_c_sub = {1:Constant(D_c1), 2:Constant(D_c2)}
+        D_a_sub = {1:Constant(D_a1), 0:Constant(D_a2)}
+        D_b_sub = {1:Constant(D_b1), 0:Constant(D_b2)}
+        D_c_sub = {1:Constant(D_c1), 0:Constant(D_c2)}
 
         # coupling coefficients for each sub-domain
-        C_a_sub = {1:Constant(C_a1), 2:Constant(C_a2)}
-        C_b_sub = {1:Constant(C_b1), 2:Constant(C_b2)}
-        C_c_sub = {1:Constant(C_c1), 2:Constant(C_c2)}
+        C_a_sub = {1:Constant(C_a1), 0:Constant(C_a2)}
+        C_b_sub = {1:Constant(C_b1), 0:Constant(C_b2)}
+        C_c_sub = {1:Constant(C_c1), 0:Constant(C_c2)}
 
         # initial concentrations for each sub-domain
-        a_init_sub = {1:ca1_init, 2:ca2_init}
-        b_init_sub = {1:cb1_init, 2:cb2_init}
-        c_init_sub = {1:cc1_init, 2:cc2_init}
+        a_init_sub = {1:ca1_init, 0:ca2_init}
+        b_init_sub = {1:cb1_init, 0:cb2_init}
+        c_init_sub = {1:cc1_init, 0:cc2_init}
 
         # create ions
         ion_a = {'D_sub':D_a_sub,
@@ -201,31 +201,31 @@ if __name__ == '__main__':
         dX = Measure('dx', domain=mesh, subdomain_data=subdomains)
 
         # compute error concentration a
-        error_ca = inner(ca2 - uh_ca, ca2 - uh_ca)*dX(2,
+        error_ca = inner(ca2 - uh_ca, ca2 - uh_ca)*dX(0,
                 metadata={'quadrature_degree': 5}) + inner(ca1 - uh_ca, ca1 -
                         uh_ca)*dX(1, metadata={'quadrature_degree': 5})
         error_ca = sqrt(abs(assemble(error_ca)))
 
         # compute error concentration b
-        error_cb = inner(cb2 - uh_cb, cb2 - uh_cb)*dX(2,
+        error_cb = inner(cb2 - uh_cb, cb2 - uh_cb)*dX(0,
                 metadata={'quadrature_degree': 5}) + inner(cb1 - uh_cb, cb1 -
                         uh_cb)*dX(1, metadata={'quadrature_degree': 5})
         error_cb = sqrt(abs(assemble(error_cb)))
 
         # compute error phi with norm for null_space solver for phi
         phi1_m_e = Constant(assemble(phi1*dX(1, metadata={'quadrature_degree': 5})))
-        phi2_m_e = Constant(assemble(phi2*dX(2, metadata={'quadrature_degree': 5})))
+        phi2_m_e = Constant(assemble(phi2*dX(0, metadata={'quadrature_degree': 5})))
         phi_mean_e = phi1_m_e + phi2_m_e
 
         phi1_m_a = Constant(assemble(uh_phi*dX(1, metadata={'quadrature_degree': 5})))
-        phi2_m_a = Constant(assemble(uh_phi*dX(2, metadata={'quadrature_degree': 5})))
+        phi2_m_a = Constant(assemble(uh_phi*dX(0, metadata={'quadrature_degree': 5})))
         phi_mean_a = phi1_m_a + phi2_m_a
 
         phi_mean = - phi_mean_a + phi_mean_e
 
-        error_phi = inner(phi2 - phi_mean - uh_phi, phi2 - phi_mean - uh_phi)*dX(2, metadata={'quadrature_degree': 5}) \
+        error_phi = inner(phi2 - phi_mean - uh_phi, phi2 - phi_mean - uh_phi)*dX(0, metadata={'quadrature_degree': 5}) \
                   + inner(phi1 - phi_mean - uh_phi, phi1 - phi_mean - uh_phi)*dX(1, metadata={'quadrature_degree': 5})
-        #error_phi = inner(phi2  - uh_phi, phi2 - uh_phi)*dX(2, metadata={'quadrature_degree': 5}) \
+        #error_phi = inner(phi2  - uh_phi, phi2 - uh_phi)*dX(0, metadata={'quadrature_degree': 5}) \
                   #+ inner(phi1  - uh_phi, phi1 - uh_phi)*dX(1, metadata={'quadrature_degree': 5})
 
         error_phi = sqrt(abs(assemble(error_phi)))
