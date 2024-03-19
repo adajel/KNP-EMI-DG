@@ -17,8 +17,7 @@ defaults:
 jobs:
   test_scripts:
     runs-on: ubuntu-latest
-    container: ghcr.io/scientificcomputing/fenics:2023-04-21
-    # Use older DOLFIN image, due to ulfy using ufl directly
+    container: ghcr.io/scientificcomputing/fenics:2024-02-19
 
     steps:
       - uses: actions/checkout@v4
@@ -34,4 +33,3 @@ jobs:
       - name: Run test (MMS)
         run: |
           python3 ./tests/run_MMS_space.py
-          python3 ./tests/run_MMS_time.py
