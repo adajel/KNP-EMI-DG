@@ -1,6 +1,5 @@
 from dolfin import *
 from collections import namedtuple
-import ufl
 
 MMSData = namedtuple('MMSData', ('solution', 'rhs', 'normals'))
 
@@ -14,7 +13,7 @@ def setup_mms(params, t, mesh):
     domain
     '''
     order = 2
-    x, y = ufl.SpatialCoordinate(mesh)
+    x, y = SpatialCoordinate(mesh)
 
     # We will vary this outside
     D_a1, D_a2, D_b1, D_b2, D_c1, D_c2, \
@@ -27,21 +26,21 @@ def setup_mms(params, t, mesh):
     params.dt, params.F, params.R, params.temperature
 
     # define exact solutions
-    k_a1 = 1 + (x + y) + 0.3 * ufl.cos(2 * ufl.pi * t)
-    k_b1 = 1 + (x + y) + 0.3 * ufl.cos(2 * ufl.pi * t)
+    k_a1 = 1 + (x + y) + 0.3 * cos(2 * pi * t)
+    k_b1 = 1 + (x + y) + 0.3 * cos(2 * pi * t)
     k_c1 = - 1/z_c * (z_a*k_a1 + z_b*k_b1)
     phi_1 = (1 + x + y) * (1 + t**2)
 
-    k_a2 = 1 + (x + y) + 0.5 * ufl.sin(2 * ufl.pi * t)
-    k_b2 = 1 + (x + y) + 0.5 * ufl.sin(2 * ufl.pi * t)
+    k_a2 = 1 + (x + y) + 0.5 * sin(2 * pi * t)
+    k_b2 = 1 + (x + y) + 0.5 * sin(2 * pi * t)
     k_c2 = - 1/z_c * (z_a*k_a2 + z_b*k_b2)
     phi_2 = (1 + x - y) * (1 + t**2)
 
-    k_a1_dt = - 0.3 * 2 * ufl.pi * ufl.sin(2 * ufl.pi * t)
-    k_b1_dt = - 0.3 * 2 * ufl.pi * ufl.sin(2 * ufl.pi * t)
+    k_a1_dt = - 0.3 * 2 * pi * sin(2 * pi * t)
+    k_b1_dt = - 0.3 * 2 * pi * sin(2 * pi * t)
     k_c1_dt = 0
-    k_a2_dt = 0.5 * 2 * ufl.pi * ufl.cos(2 * ufl.pi * t)
-    k_b2_dt = 0.5 * 2 * ufl.pi * ufl.cos(2 * ufl.pi * t)
+    k_a2_dt = 0.5 * 2 * pi * cos(2 * pi * t)
+    k_b2_dt = 0.5 * 2 * pi * cos(2 * pi * t)
     k_c2_dt = 0
 
     # define initial conditions
