@@ -1243,6 +1243,4 @@ class Solver:
             # copy to global function
             F.vector()[o_dofss[tag-1]] = F_tag.vector()[o_dofss[tag-1]]
 
-        File("test.pvd") << F
-
         return F

@@ -3,13 +3,11 @@ import numpy as np
 import sys
 import os
 
-import matplotlib.pyplot as plt
-
 parameters['ghost_mode'] = 'shared_vertex'
 
 if __name__ == '__main__':
     from mms_time import setup_mms
-    from solver import Solver
+    from knpemidg import Solver
     from collections import namedtuple
     from itertools import chain
 
@@ -48,17 +46,16 @@ if __name__ == '__main__':
         dt = dt_0/(2**i)     # time step
         print("dt", dt)
 
-        D_a1 = 5; D_a2 = 5
-        D_b1 = 2; D_b2 = 2
-        D_c1 = 1; D_c2 = 1
+        D_a1 = Constant(5); D_a2 = Constant(5)
+        D_b1 = Constant(2); D_b2 = Constant(2)
+        D_c1 = Constant(1); D_c2 = Constant(1)
 
-        C_a1 = 4; C_a2 = 4
-        C_b1 = 4; C_b2 = 4
-        C_c1 = 4; C_c2 = 4
+        C_a1 = Constant(4); C_a2 = Constant(4)
+        C_b1 = Constant(4); C_b2 = Constant(4)
+        C_c1 = Constant(4); C_c2 = Constant(4)
 
-        z_a = -1.0; z_b = 1.0; z_c = 1.0
-
-        F = 1; C_M = 1; R = 1; temperature = 1
+        z_a = Constant(-1.0); z_b = Constant(1.0); z_c = Constant(1.0)
+        F = Constant(1); C_M = Constant(1); R = Constant(1); temperature = Constant(1)
 
         phi_M_init = Expression('(1 + x[0] + x[1]) - (1 + x[0] - x[1])', degree=4)
 
@@ -73,7 +70,7 @@ if __name__ == '__main__':
                                   z_a, z_b, z_c, dt, F, C_M, phi_M_init, \
                                   R, temperature, t)
 
-        mms = setup_mms(params, t)
+        mms = setup_mms(params, t, mesh)
 
         ca2 = mms.solution['c_a2']
         cb2 = mms.solution['c_b2']
@@ -94,12 +91,12 @@ if __name__ == '__main__':
         # Neumann bcs
 
         # get initial concentrations
-        ca1_init = mms.solution['c_a1']
-        ca2_init = mms.solution['c_a2']
-        cb1_init = mms.solution['c_b1']
-        cb2_init = mms.solution['c_b2']
-        cc1_init = mms.solution['c_c1']
-        cc2_init = mms.solution['c_c2']
+        ca1_init = mms.solution['c_a1_init']
+        ca2_init = mms.solution['c_a2_init']
+        cb1_init = mms.solution['c_b1_init']
+        cb2_init = mms.solution['c_b2_init']
+        cc1_init = mms.solution['c_c1_init']
+        cc2_init = mms.solution['c_c2_init']
 
         # get source terms from MMS equation for concentrations
         fca1 = mms.rhs['volume_c_a1']        # concentration a in domain 1
@@ -275,5 +272,3 @@ if __name__ == '__main__':
         print(hs[i], errors_phi[i])
 
     print("meshsize:", mesh_size)
-
-

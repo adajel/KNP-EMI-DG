@@ -11,5 +11,3 @@ dependencies:
   - numba
   - mpich
   - conda-ecosystem-user-package-isolation
-  - pip:
-      - "ulfy@git+https://github.com/MiroK/ulfy.git"

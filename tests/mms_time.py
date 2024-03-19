@@ -1,11 +1,10 @@
 from dolfin import *
-import ulfy  # https://github.com/MiroK/ulfy
 from collections import namedtuple
-import sympy as sp
+import ufl
 
 MMSData = namedtuple('MMSData', ('solution', 'rhs', 'normals'))
 
-def setup_mms(params, t):
+def setup_mms(params, t, mesh):
     '''We solve EMI on
 
     [       ]
@@ -15,36 +14,44 @@ def setup_mms(params, t):
     domain
     '''
     order = 2
-    mesh = UnitSquareMesh(2**(2+order), 2**(2+order), 'crossed')
-    x, y = SpatialCoordinate(mesh)
+    x, y = ufl.SpatialCoordinate(mesh)
 
     # We will vary this outside
-    D_a1, D_a2, D_b1, D_b2, D_c1, D_c2,\
+    D_a1, D_a2, D_b1, D_b2, D_c1, D_c2, \
     C_a1, C_a2, C_b1, C_b2, C_c1, C_c2, C_phi, \
     z_a, z_b, z_c, dt, F, R, temperature = \
-    Constant(1), Constant(1), Constant(1), Constant(1), \
-    Constant(1), Constant(1), Constant(1), Constant(1), Constant(1), \
-    Constant(1), Constant(1), Constant(1), Constant(1), Constant(1), \
-    Constant(1), \
-    Constant(1), Constant(1), Constant(1), Constant(1), Constant(1)
+    params.D_a1, params.D_a2, params.D_b1, params.D_b2, \
+    params.D_c1, params.D_c2, params.C_a1, params.C_a2, \
+    params.C_b1, params.C_b2, params.C_c1, params.C_c2, \
+    params.C_phi, params.z_a, params.z_b, params.z_c, \
+    params.dt, params.F, params.R, params.temperature
 
     # define exact solutions
-    k_a1 = 1 + (x + y) + 0.3 * cos(2 * pi * t)
-    k_b1 = 1 + (x + y) + 0.3 * cos(2 * pi * t)
+    k_a1 = 1 + (x + y) + 0.3 * ufl.cos(2 * ufl.pi * t)
+    k_b1 = 1 + (x + y) + 0.3 * ufl.cos(2 * ufl.pi * t)
     k_c1 = - 1/z_c * (z_a*k_a1 + z_b*k_b1)
     phi_1 = (1 + x + y) * (1 + t**2)
 
-    k_a2 = 1 + (x + y) + 0.5 * sin(2 * pi * t)
-    k_b2 = 1 + (x + y) + 0.5 * sin(2 * pi * t)
+    k_a2 = 1 + (x + y) + 0.5 * ufl.sin(2 * ufl.pi * t)
+    k_b2 = 1 + (x + y) + 0.5 * ufl.sin(2 * ufl.pi * t)
     k_c2 = - 1/z_c * (z_a*k_a2 + z_b*k_b2)
     phi_2 = (1 + x - y) * (1 + t**2)
 
-    k_a1_dt = - 0.3 * 2 * pi * sin(2 * pi * t)
-    k_b1_dt = - 0.3 * 2 * pi * sin(2 * pi * t)
+    k_a1_dt = - 0.3 * 2 * ufl.pi * ufl.sin(2 * ufl.pi * t)
+    k_b1_dt = - 0.3 * 2 * ufl.pi * ufl.sin(2 * ufl.pi * t)
     k_c1_dt = 0
-    k_a2_dt = 0.5 * 2 * pi * cos(2 * pi * t)
-    k_b2_dt = 0.5 * 2 * pi * cos(2 * pi * t)
+    k_a2_dt = 0.5 * 2 * ufl.pi * ufl.cos(2 * ufl.pi * t)
+    k_b2_dt = 0.5 * 2 * ufl.pi * ufl.cos(2 * ufl.pi * t)
     k_c2_dt = 0
+
+    # define initial conditions
+    k_a1_init = Expression('1 + (x[0] + x[1]) + 0.3', degree=4)
+    k_b1_init = Expression('1 + (x[0] + x[1]) + 0.3', degree=4)
+    k_c1_init = Expression('- 1/z_c * (z_a*(1 + (x[0] + x[1]) + 0.3) + z_b*(1 + (x[0] + x[1]) + 0.3))', z_a=z_a, z_b=z_b, z_c=z_c, degree=4)
+
+    k_a2_init = Expression('1 + (x[0] + x[1])', degree=4)
+    k_b2_init = Expression('1 + (x[0] + x[1])', degree=4)
+    k_c2_init = Expression('- 1/z_c * (z_a*(1 + (x[0] + x[1])) + z_b*(1 + (x[0] + x[1])))', z_a=z_a, z_b=z_b, z_c=z_c, degree=4)
 
     psi = F/(R*temperature)
 
@@ -122,73 +129,38 @@ def setup_mms(params, t):
          for n1 in normals
     )
 
-    # What we want to substitute
-    D_a1_, D_a2_, D_b1_, D_b2_, D_c1_, D_c2_, \
-    C_a1_, C_a2_, C_b1_, C_b2_, C_c1_, C_c2_, C_phi_, \
-    z_a_, z_b_, z_c_, dt_, F_, R_, temperature_, t_ = \
-            sp.symbols('D_a1, D_a2, D_b1, D_b2, D_c1, D_c2,\
-                        C_a1, C_a2, C_b1, C_b2, C_c1, C_c2, C_phi, \
-                       z_a, z_b, z_c, dt, F, R, temperature, t')
-
-    subs = {D_a1:D_a1_, D_a2:D_a2_, D_b1:D_b1_, D_b2:D_b2_, D_c1:D_c1_, D_c2:D_c2_,\
-            C_a1:C_a1_, C_a2:C_a2_, C_b1:C_b1_, C_b2:C_b2_, C_c1:C_c1_, C_c2:C_c2_,\
-            C_phi:C_phi_, \
-            z_a:z_a_, z_b:z_b_, z_c:z_c_, dt:dt_, F:F_, t:t_}
-
-    as_expression = lambda f, subs=subs: ulfy.Expression(f, subs=subs, degree=4,
-                                                         D_a1=params.D_a1,
-                                                         D_a2=params.D_a2,
-                                                         D_b1=params.D_b1,
-                                                         D_b2=params.D_b2,
-                                                         D_c1=params.D_c1,
-                                                         D_c2=params.D_c2,
-                                                         C_a1=params.C_a1,
-                                                         C_a2=params.C_a2,
-                                                         C_b1=params.C_b1,
-                                                         C_b2=params.C_b2,
-                                                         C_c1=params.C_c1,
-                                                         C_c2=params.C_c2,
-                                                         C_phi=params.C_phi,
-                                                         z_a=params.z_a,
-                                                         z_b=params.z_b,
-                                                         z_c=params.z_c,
-                                                         F=params.F,
-                                                         R=params.R,
-                                                         temperature=params.temperature,
-                                                         dt=params.dt,
-                                                         t=t)
-
-    k_a1_exact, k_b1_exact, k_c1_exact, phi_1_exact, J_a1_exact, J_b1_exact, J_c1_exact = \
-        map(as_expression, (k_a1, k_b1, k_c1, phi_1, J_a1, J_b1, J_c1))
-
-    k_a2_exact, k_b2_exact, k_c2_exact, phi_2_exact, J_a2_exact, J_b2_exact, J_c2_exact = \
-        map(as_expression, (k_a2, k_b2, k_c2, phi_2, J_a2, J_b2, J_c2))
-
-    return MMSData(solution={'c_a1': k_a1_exact,
-                             'c_b1': k_b1_exact,
-                             'c_c1': k_c1_exact,
-                             'phi_1': phi_1_exact,
-                             'c_a2': k_a2_exact,
-                             'c_b2': k_b2_exact, \
-                             'c_c2': k_c2_exact, \
-                             'phi_2': phi_2_exact},
-                   rhs={'volume_c_a1': as_expression(f_k_a1),
-                        'volume_c_b1': as_expression(f_k_b1),
-                        'volume_c_c1': as_expression(f_k_c1),
-                        'volume_phi_1': as_expression(f_phi_1),
-                        'volume_c_a2': as_expression(f_k_a2),
-                        'volume_c_b2': as_expression(f_k_b2),
-                        'volume_c_c2': as_expression(f_k_c2),
-                        'volume_phi_2': as_expression(f_phi_2),
-                        'bdry': {'neumann_a': J_a2_exact,
-                                 'neumann_b': J_b2_exact,
-                                 'neumann_c': J_c2_exact,
-                                 'stress': dict(enumerate(map(as_expression, g_J_phi), 1)),
-                                 'u_phi': dict(enumerate(map(as_expression, g_phi), 1)),
-                                 'u_a1': dict(enumerate(map(as_expression, g_k_a1), 1)),
-                                 'u_b1': dict(enumerate(map(as_expression, g_k_b1), 1)),
-                                 'u_c1': dict(enumerate(map(as_expression, g_k_c1), 1)),
-                                 'u_a2': dict(enumerate(map(as_expression, g_k_a2), 1)),
-                                 'u_b2': dict(enumerate(map(as_expression, g_k_b2), 1)),
-                                 'u_c2': dict(enumerate(map(as_expression, g_k_c2), 1))}},
+    return MMSData(solution={'c_a1': k_a1,
+                             'c_b1': k_b1,
+                             'c_c1': k_c1,
+                             'phi_1': phi_1,
+                             'c_a2': k_a2,
+                             'c_b2': k_b2,
+                             'c_c2': k_c2,
+                             'phi_2': phi_2,
+                             'c_a1_init': k_a1_init,
+                             'c_b1_init': k_b1_init,
+                             'c_c1_init': k_c1_init,
+                             'c_a2_init': k_a2_init,
+                             'c_b2_init': k_b2_init,
+                             'c_c2_init': k_c2_init,
+                             },
+                   rhs={'volume_c_a1': f_k_a1,
+                        'volume_c_b1': f_k_b1,
+                        'volume_c_c1': f_k_c1,
+                        'volume_phi_1':f_phi_1,
+                        'volume_c_a2': f_k_a2,
+                        'volume_c_b2': f_k_b2,
+                        'volume_c_c2': f_k_c2,
+                        'volume_phi_2':f_phi_2,
+                        'bdry': {'neumann_a': J_a2,
+                                 'neumann_b': J_b2,
+                                 'neumann_c': J_c2,
+                                 'stress': dict(enumerate(g_J_phi, 1)),
+                                 'u_phi': dict(enumerate(g_phi, 1)),
+                                 'u_a1': dict(enumerate(g_k_a1, 1)),
+                                 'u_b1': dict(enumerate(g_k_b1, 1)),
+                                 'u_c1': dict(enumerate(g_k_c1, 1)),
+                                 'u_a2': dict(enumerate(g_k_a2, 1)),
+                                 'u_b2': dict(enumerate(g_k_b2, 1)),
+                                 'u_c2': dict(enumerate(g_k_c2, 1))}},
                    normals=[])

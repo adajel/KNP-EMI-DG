@@ -39,3 +39,4 @@ jobs:
       - name: Run test (MMS)
         run: |
           python ./tests/run_MMS_space.py
+          python ./tests/run_MMS_time.py

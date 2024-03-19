@@ -29,19 +29,17 @@ if __name__ == '__main__':
         t = Constant(0.0)    # time constant (s)
         dt = dt_0
 
-        D_a1 = 6; D_a2 = 5
-        D_b1 = 3; D_b2 = 4
-        D_c1 = 1; D_c2 = 2
+        D_a1 = Constant(6); D_a2 = Constant(5)
+        D_b1 = Constant(3); D_b2 = Constant(4)
+        D_c1 = Constant(1); D_c2 = Constant(2)
 
-        C_a1 = 1; C_a2 = 2
-        C_b1 = 2; C_b2 = 4
-        C_c1 = 3; C_c2 = 2
+        C_a1 = Constant(1); C_a2 = Constant(2)
+        C_b1 = Constant(2); C_b2 = Constant(4)
+        C_c1 = Constant(3); C_c2 = Constant(2)
 
-        z_a = -1.0; z_b = 1.0; z_c = 1.0
+        z_a = Constant(-1.0); z_b = Constant(1.0); z_c = Constant(1.0)
 
-        F = 1; C_M = 1.0;  R = 1; temperature = 1
-
-        print(C_M/dt)
+        F = Constant(1); C_M = Constant(1.0);  R = Constant(1); temperature = Constant(1)
 
         phi_M_init = Expression('sin(2*pi*(x[0]-x[1])) - cos(pi*(x[0]+x[1]))', degree=4)
 
@@ -59,7 +57,23 @@ if __name__ == '__main__':
 
         t = Constant(0.0)
 
-        mms = setup_mms(params, t)
+        # get mesh, subdomains, surfaces path
+        here = os.path.abspath(os.path.dirname(__file__))
+        mesh_prefix = os.path.join(here, 'meshes/MMS/')
+        mesh_path = mesh_prefix + 'mesh_' + str(resolution) + '.xml'
+        subdomains_path = mesh_prefix + 'subdomains_' + str(resolution) + '.xml'
+        surfaces_path = mesh_prefix + 'surfaces_' + str(resolution) + '.xml'
+
+        # generate mesh if it does not exist
+        if not os.path.isfile(mesh_path):
+            from make_mesh_MMS import main
+            main(["-r", str(resolution), "-d", mesh_prefix])
+
+        mesh = Mesh(mesh_path)
+        subdomains = MeshFunction('size_t', mesh, subdomains_path)
+        surfaces = MeshFunction('size_t', mesh, surfaces_path)
+
+        mms = setup_mms(params, t, mesh)
 
         ca2 = mms.solution['c_a2']
         cb2 = mms.solution['c_b2']
@@ -80,12 +94,12 @@ if __name__ == '__main__':
         # Neumann bcs.
 
         # get initial concentrations
-        ca1_init = mms.solution['c_a1']
-        ca2_init = mms.solution['c_a2']
-        cb1_init = mms.solution['c_b1']
-        cb2_init = mms.solution['c_b2']
-        cc1_init = mms.solution['c_c1']
-        cc2_init = mms.solution['c_c2']
+        ca1_init = mms.solution['c_a1_init']
+        ca2_init = mms.solution['c_a2_init']
+        cb1_init = mms.solution['c_b1_init']
+        cb2_init = mms.solution['c_b2_init']
+        cc1_init = mms.solution['c_c1_init']
+        cc2_init = mms.solution['c_c2_init']
 
         # get source terms from MMS equation for concentrations
         fca1 = mms.rhs['volume_c_a1']        # concentration a in domain 1
@@ -164,22 +178,6 @@ if __name__ == '__main__':
 
         S = Solver(params=params, ion_list=ion_list, degree_emi=degree,
                 degree_knp=degree, mms=mms)
-
-        # get mesh, subdomains, surfaces path
-        here = os.path.abspath(os.path.dirname(__file__))
-        mesh_prefix = os.path.join(here, 'meshes/MMS/')
-        mesh_path = mesh_prefix + 'mesh_' + str(resolution) + '.xml'
-        subdomains_path = mesh_prefix + 'subdomains_' + str(resolution) + '.xml'
-        surfaces_path = mesh_prefix + 'surfaces_' + str(resolution) + '.xml'
-
-        # generate mesh if it does not exist
-        if not os.path.isfile(mesh_path):
-            from make_mesh_MMS import main
-            main(["-r", str(resolution), "-d", mesh_prefix])
-
-        mesh = Mesh(mesh_path)
-        subdomains = MeshFunction('size_t', mesh, subdomains_path)
-        surfaces = MeshFunction('size_t', mesh, surfaces_path)
 
         S.setup_domain(mesh, subdomains, surfaces)      # setup domain
         S.setup_parameters()                            # setup physical parameters
