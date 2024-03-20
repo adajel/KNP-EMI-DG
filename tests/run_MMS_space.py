@@ -183,12 +183,29 @@ if __name__ == '__main__':
         S.setup_parameters()                            # setup physical parameters
         S.setup_FEM_spaces()                            # setup function spaces and numerical parameters
 
+        # Set solver parameters EMI (True is direct, and False is iterate) 
         direct_emi = True
+
+        rtol_emi = 1E-5
+        atol_emi = 1E-13
+        threshold_emi = 0.9
+
+        # Set solver parameters KNP (True is direct, and False is iterate) 
         direct_knp = True
 
-        # set parameters
+        rtol_knp = 1E-7
+        atol_knp = 1E-40
+        threshold_knp = None
+
+        # Set parameters
         solver_params = namedtuple('solver_params', ('direct_emi',
-            'direct_knp', 'resolution'))(direct_emi, direct_knp, resolution)
+                                   'direct_knp', 'resolution',
+                                   'rtol_emi', 'rtol_knp',
+                                   'atol_emi', 'atol_knp',
+                                   'threshold_emi', 'threshold_knp'
+                                   ))(direct_emi, direct_knp, resolution, \
+                                      rtol_emi, rtol_knp, atol_emi, atol_knp, \
+                                      threshold_emi, threshold_knp)
 
         #uh_ca, uh_cb, uh_phi = S.solve_system(Tstop, dt, t)
         uh, uh_cc = S.solve_system_passive(Tstop, t, solver_params, membrane_params)
