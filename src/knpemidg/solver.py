@@ -201,7 +201,7 @@ class Solver:
     def setup_membrane_model(self, stim_params, odes):
         """
         Initiate membrane model(s) containing membrane mechanisms (passive
-        dynamics / ODEs) and src terms for PDE system and stimulus
+        dynamics / ODEs) and src terms for PDE system
         """
 
         # set stimulus parameters
@@ -211,7 +211,7 @@ class Solver:
         # list of membrane models
         self.mem_models = []
 
-        # initialize and append ode models
+        # initialize and append ode models to list
         for tag, ode in odes.items():
             # Initialize ODE model
             ode_model = MembraneModel(ode, facet_f=self.surfaces, tag=tag, V=self.Q)
@@ -219,9 +219,9 @@ class Solver:
             # Set ODE capacitance (to ensure same values are used)
             ode_model.set_parameter_values({'Cm': lambda x: self.params.C_M})
 
-            # Initialize src terms for PDE step
-            I_ch_k = {} # dictionary for ion specific currents
-
+            # dictionary for ion specific currents (i.e src terms PDEs)
+            I_ch_k = {} 
+            # Initialize src terms for PDEs
             for ion in self.ion_list:
                 # function for src term pde
                 I_ch_k_ = Function(self.Q)
@@ -230,7 +230,7 @@ class Solver:
                 # set function in dictionary
                 I_ch_k[ion['name']] = I_ch_k_
 
-            # define membrane model (with ode model and src terms for PDEs)
+            # define membrane model (with ode model and src term for PDEs)
             mem_model = {'ode': ode_model, 'I_ch_k': I_ch_k}
 
             # append to list of membrane models
@@ -400,23 +400,16 @@ class Solver:
             opts.setValue('ksp_monitor_true_residual', None)
             opts.setValue('ksp_error_if_not_converged', 1)
             opts.setValue('ksp_max_it', 1000)
-            opts.setValue('ksp_view', None)
-
-            # tolerance seems to depend on dimension of mesh
-            if self.gdim == 3:
-                opts.setValue('ksp_rtol', 1E-5)
-                opts.setValue('ksp_atol', 1E-13)
-                opts.setValue('pc_hypre_boomeramg_strong_threshold', 0.9)
-            elif self.gdim == 2:
-                opts.setValue('ksp_rtol', 1E-5)
-                opts.setValue('ksp_atol', 1E-13)
-                #opts.setValue('ksp_rtol', 1E-7)
-                #opts.setValue('ksp_atol', 1E-14)
-                opts.setValue('pc_hypre_boomeramg_strong_threshold', 0.9)
-
-            opts.setValue('ksp_initial_guess_nonzero', 1)
             opts.setValue('ksp_converged_reason', None)
+            opts.setValue('ksp_initial_guess_nonzero', 1)
+            opts.setValue('ksp_view', None)
             opts.setValue('pc_type', 'hypre')
+
+            # set tolerances
+            opts.setValue('ksp_rtol', self.rtol_emi)
+            opts.setValue('ksp_atol', self.atol_emi)
+            if self.threshold_emi is not None:
+                opts.setValue('pc_hypre_boomeramg_strong_threshold', self.threshold_emi)
 
             ksp.setOptionsPrefix('EMI_ITER')
             ksp.setConvergenceHistory()
@@ -665,19 +658,14 @@ class Solver:
             opts.setValue("ksp_max_it", 1000)
             opts.setValue('pc_type', 'hypre')
             opts.setValue("ksp_converged_reason", None)
-
-            # tolerance seems to depend on dimension of mesh
-            if self.gdim == 3:
-                opts.setValue('ksp_rtol', 1E-7)
-                opts.setValue('ksp_atol', 2E-17)
-                opts.setValue('pc_hypre_boomeramg_strong_threshold', 0.75)
-            elif self.gdim == 2:
-                opts.setValue('ksp_rtol', 1E-7)
-                opts.setValue('ksp_atol', 1E-40)
-
             opts.setValue("ksp_initial_guess_nonzero", 1)
             opts.setValue("ksp_view", None)
             opts.setValue("ksp_monitor_true_residual", None)
+
+            opts.setValue('ksp_rtol', self.rtol_knp)
+            opts.setValue('ksp_atol', self.atol_knp)
+            if self.threshold_knp is not None:
+                opts.setValue('pc_hypre_boomeramg_strong_threshold', self.threshold_knp)
 
             ksp.setOptionsPrefix('KNP_ITER')
             ksp.setFromOptions()
@@ -917,9 +905,15 @@ class Solver:
         """
 
         # Setup solver and parameters
-        self.solver_params = solver_params          # parameters for solvers
-        self.direct_emi = solver_params.direct_emi  # choice of emi solver
-        self.direct_knp = solver_params.direct_knp  # choice of knp solver
+        self.solver_params = solver_params               # parameters for solvers
+        self.direct_emi = solver_params.direct_emi       # choice of solver emi
+        self.rtol_emi = solver_params.rtol_emi           # relative tolerance emi
+        self.atol_emi = solver_params.atol_emi           # absolute tolerance emi
+        self.threshold_emi = solver_params.threshold_emi # threshold emi
+        self.direct_knp = solver_params.direct_knp       # choice of solver knp
+        self.rtol_knp = solver_params.rtol_knp           # relative tolerance knp
+        self.atol_knp = solver_params.atol_knp           # absolute tolerance knp
+        self.threshold_knp = solver_params.threshold_knp # threshold knp
 
         self.splitting_scheme = False               # no splitting scheme
 
@@ -991,9 +985,15 @@ class Solver:
         """ Solve system with active membrane mechanisms (ODEs) """
 
         # Setup solver and parameters
-        self.solver_params = solver_params          # parameters for solvers
-        self.direct_emi = solver_params.direct_emi  # choice of emi solver
-        self.direct_knp = solver_params.direct_knp  # choice of knp solver
+        self.solver_params = solver_params               # parameters for solvers
+        self.direct_emi = solver_params.direct_emi       # choice of solver emi
+        self.rtol_emi = solver_params.rtol_emi           # relative tolerance emi
+        self.atol_emi = solver_params.atol_emi           # absolute tolerance emi
+        self.threshold_emi = solver_params.threshold_emi # threshold emi
+        self.direct_knp = solver_params.direct_knp       # choice of solver knp
+        self.rtol_knp = solver_params.rtol_knp           # relative tolerance knp
+        self.atol_knp = solver_params.atol_knp           # absolute tolerance knp
+        self.threshold_knp = solver_params.threshold_knp # threshold knp
 
         stimulus = self.stimulus
         stimulus_locator = self.stimulus_locator

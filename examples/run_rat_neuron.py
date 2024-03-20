@@ -9,7 +9,7 @@ import numpy as np
 
 from collections import namedtuple
 
-from solver import Solver
+from knpemidg import Solver
 import mm_hh as mm_hh
 import mm_leak as mm_leak
 
@@ -64,16 +64,23 @@ if __name__ == "__main__":
             'phi_M_init', 'C_phi', 'C_M', 'R', 'temperature'))(dt, \
             n_steps_ODE, F, psi, phi_M_init, C_phi, C_M, R, temperature)
 
-    # Create ions (channel conductivity is set below for each model)
-    Na = {'D1':D_Na, 'D2':D_Na,
-          'c1_init':Na_i_init, 'c2_init':Na_e_init, 'bdry': Constant((0, 0)),
-          'z':1.0, 'name':'Na'}
-    K = {'D1':D_K, 'D2':D_K,
-         'c1_init':K_i_init, 'c2_init':K_e_init, 'bdry': Constant((0, 0)),
-         'z':1.0, 'name':'K'}
-    Cl = {'D1':D_Cl, 'D2':D_Cl,
-          'c1_init':Cl_i_init, 'c2_init':Cl_e_init, 'bdry': Constant((0, 0)),
-          'z':-1.0, 'name':'Cl'}
+    # diffusion coefficients for each sub-domain
+    D_Na_sub = {1:D_Na, 0:D_Na}
+    D_K_sub = {1:D_K, 0:D_K}
+    D_Cl_sub = {1:D_Cl, 0:D_Cl}
+
+    # initial concentrations for each sub-domain
+    Na_init_sub = {1:Na_i_init, 0:Na_e_init}
+    K_init_sub = {1:K_i_init, 0:K_e_init}
+    Cl_init_sub = {1:Cl_i_init, 0:Cl_e_init}
+
+    # Create ions (channel conductivity is set below in the membrane model)
+    Na = {'c_init_sub':Na_init_sub, 'bdry': Constant((0, 0)),
+          'z':1.0, 'name':'Na', 'D_sub':D_Na_sub}
+    K = {'c_init_sub':K_init_sub, 'bdry': Constant((0, 0)),
+         'z':1.0, 'name':'K', 'D_sub':D_K_sub}
+    Cl = {'c_init_sub':Cl_init_sub, 'bdry': Constant((0, 0)),
+          'z':-1.0, 'name':'Cl', 'D_sub':D_Cl_sub}
 
     # Create ion list. NB! The last ion in list will be eliminated, and should 
     # be the ion with the smallest diffusion coefficient
@@ -112,7 +119,7 @@ if __name__ == "__main__":
     # Remark subdomains
     for cell in cells(mesh):
         if cell_f[cell] == 1:
-            cell_f[cell] = 2
+            cell_f[cell] = 0
         elif cell_f[cell] == 2:
             cell_f[cell] = 1
         else:
@@ -120,7 +127,7 @@ if __name__ == "__main__":
 
     # Print for debug
     nzero_cells = np.sum(cell_f.array() == 1)
-    none_cells = np.sum(cell_f.array() == 2)
+    none_cells = np.sum(cell_f.array() == 0)
 
     print('# zeros', nzero_cells, '# ones', none_cells)
 
@@ -136,18 +143,9 @@ if __name__ == "__main__":
         c0, c1 = f.entities(cdim)
         # Disagreement in tags means the interface
         if cell_f[c0] != cell_f[c1]:
-
-            #if (-80 < f.midpoint().y() < -70):
-                #print(f.midpoint().x(), f.midpoint().y(), f.midpoint().z())
-
             facet_f[f.index()] = 1
-            #if f.midpoint().y() >= -6.0:
             if f.midpoint().y() >= -5.0:
                 facet_f[f.index()] = 2
-
-    # File for testing marking (by eye in paraview)
-    #File('test_subdomains.pvd') << cell_f
-    #File('test_interfaces.pvd') << facet_f
 
     # Convert mesh to unit meter (m)
     mesh.coordinates()[:, :] *= 1e-6
@@ -158,12 +156,27 @@ if __name__ == "__main__":
     with XDMFFile('results/data/rat_neuron/subdomains.xdmf') as xdmf:
         xdmf.write(cell_f)
 
-    # Set solver parameters (True is direct, and False is iterate)
+    # Set solver parameters EMI (True is direct, and False is iterate) 
     direct_emi = False
-    direct_knp = False
+    rtol_emi = 1E-5
+    atol_emi = 1E-13
+    threshold_emi = 0.9
 
+    # Set solver parameters KNP (True is direct, and False is iterate) 
+    direct_knp = False
+    rtol_knp = 1E-7
+    atol_knp = 2E-17
+    threshold_knp = 0.75
+
+    # Set parameters
     solver_params = namedtuple('solver_params', ('direct_emi',
-        'direct_knp', 'resolution'))(direct_emi, direct_knp, resolution)
+                               'direct_knp', 'resolution',
+                               'rtol_emi', 'rtol_knp',
+                               'atol_emi', 'atol_knp',
+                               'threshold_emi', 'threshold_knp'
+                               ))(direct_emi, direct_knp, resolution, \
+                                  rtol_emi, rtol_knp, atol_emi, atol_knp, \
+                                  threshold_emi, threshold_knp)
 
     # File for saving results
     fname = "results/data/rat_neuron/"

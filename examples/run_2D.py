@@ -113,13 +113,27 @@ if __name__=='__main__':
         subdomains = MeshFunction('size_t', mesh, subdomains_path)
         surfaces = MeshFunction('size_t', mesh, surfaces_path)
 
-        # Set solver parameters (True is direct, and False is iterate)
+        # Set solver parameters EMI (True is direct, and False is iterate) 
         direct_emi = False
+        rtol_emi = 1E-5
+        atol_emi = 1E-13
+        threshold_emi = 0.9
+
+        # Set solver parameters KNP (True is direct, and False is iterate) 
         direct_knp = False
+        rtol_knp = 1E-7
+        atol_knp = 1E-40
+        threshold_knp = None
 
         # Set parameters
         solver_params = namedtuple('solver_params', ('direct_emi',
-            'direct_knp', 'resolution'))(direct_emi, direct_knp, resolution)
+                                   'direct_knp', 'resolution',
+                                   'rtol_emi', 'rtol_knp',
+                                   'atol_emi', 'atol_knp',
+                                   'threshold_emi', 'threshold_knp'
+                                   ))(direct_emi, direct_knp, resolution, \
+                                      rtol_emi, rtol_knp, atol_emi, atol_knp, \
+                                      threshold_emi, threshold_knp)
 
         # File for results
         fname = 'results/data/2D/'
