@@ -1012,7 +1012,7 @@ class Solver:
         self.setup_solver_knp()
 
         # Calculate ODE time step (s)
-        dt_ode = float(self.dt/self.params.n_steps_ODE)
+        dt_ode = float(self.dt)
 
         # Initialize save results
         if filename is not None:
@@ -1037,7 +1037,7 @@ class Solver:
                 ode_model.set_parameter('E_Na', self.ion_list[2]['E'])
 
                 # Solve ODEs
-                ode_model.step_lsoda(dt=dt_ode*self.params.n_steps_ODE, \
+                ode_model.step_lsoda(dt=dt_ode, \
                     stimulus=stimulus, stimulus_locator=stimulus_locator)
 
                 # Update PDE functions based on ODE output
@@ -1216,14 +1216,14 @@ class Solver:
         dofmap = Q.dofmap()
 
         # list of list of dofs for each sub-domain
-        o_dofss = [[] for i in range(len(f)) ]
+        o_dofss = {key: [] for key in f.keys()}
 
         i = 0
         # fill list with relevant dofs for each sub-domains
         for cell in cells(mesh):
             for tag, function in f.items():
                 if subdomains[cell] == tag:
-                    o_dofss[tag-1].extend(dofmap.cell_dofs(cell.index()))
+                    o_dofss[tag].extend(dofmap.cell_dofs(cell.index()))
                     i += 1
                     break
 
@@ -1232,7 +1232,7 @@ class Solver:
                "Dictionaries for DG data must match cell tags in mesh"
 
         # set dofs list
-        for o_dofs in o_dofss:
+        for key, o_dofs in o_dofss.items():
             o_dofs = list(set(o_dofs))
 
         F = Function(Q)
@@ -1241,6 +1241,6 @@ class Solver:
             # interpolate data for sub-domain with tag tag
             F_tag = interpolate(function, Q)
             # copy to global function
-            F.vector()[o_dofss[tag-1]] = F_tag.vector()[o_dofss[tag-1]]
+            F.vector()[o_dofss[tag]] = F_tag.vector()[o_dofss[tag]]
 
         return F

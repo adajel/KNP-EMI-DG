@@ -27,13 +27,11 @@ class bcolors:
 if __name__ == "__main__":
 
     # Resolution factor of mesh
-    #for resolution in [0, 1]:
-    for resolution in [1]:
+    for resolution in [0, 1]:
 
         # Time variables PDEs
         dt = 1.0e-4                      # global time step (s)
-        #Tstop = 1.0e-1                  # global end time (s)
-        Tstop = 1.0e-3                  # global end time (s)
+        Tstop = 1.0e-1                  # global end time (s)
         t = Constant(0.0)                # time constant
 
         # Time variables ODEs
@@ -115,13 +113,13 @@ if __name__ == "__main__":
         # Set solver parameters EMI (True is direct, and False is iterate) 
         direct_emi = False
         rtol_emi = 1E-5
-        atol_emi = 1E-13
+        atol_emi = 1E-40
         threshold_emi = 0.9
 
         # Set solver parameters KNP (True is direct, and False is iterate) 
         direct_knp = False
         rtol_knp = 1E-7
-        atol_knp = 2E-17
+        atol_knp = 2E-40
         threshold_knp = 0.75
 
         # Set parameters
@@ -133,14 +131,6 @@ if __name__ == "__main__":
                                    ))(direct_emi, direct_knp, resolution, \
                                       rtol_emi, rtol_knp, atol_emi, atol_knp, \
                                       threshold_emi, threshold_knp)
-
-        # Set solver parameters (True is direct, and False is iterate)
-        #direct_emi = False
-        #direct_knp = False
-
-        # Set solver parameters
-        #solver_params = namedtuple('solver_params', ('direct_emi',
-            #'direct_knp', 'resolution'))(direct_emi, direct_knp, resolution)
 
         # File for results
         fname = "results/data/3D/"

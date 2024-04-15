@@ -29,11 +29,11 @@ if __name__=='__main__':
     from collections import namedtuple
 
     # Resolution factor of mesh
-    for resolution in [2]:
+    for resolution in [2, 3, 4, 5]:
 
         # Time variables (PDEs)
         dt = 1.0e-4                      # global time step (s)
-        Tstop = 5.0e-3                   # global end time (s)
+        Tstop = 1.0e-1                   # global end time (s)
         t = Constant(0.0)                # time constant
 
         # Time variables (ODEs)
@@ -116,8 +116,8 @@ if __name__=='__main__':
         # Set solver parameters EMI (True is direct, and False is iterate) 
         direct_emi = False
         rtol_emi = 1E-5
-        atol_emi = 1E-13
-        threshold_emi = 0.9
+        atol_emi = 1E-40
+        threshold_emi = None
 
         # Set solver parameters KNP (True is direct, and False is iterate) 
         direct_knp = False

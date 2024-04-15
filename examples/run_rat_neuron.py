@@ -32,7 +32,7 @@ if __name__ == "__main__":
 
     # Time variables (PDEs)
     dt = 1.0e-4                      # global time step (s)
-    Tstop = 1.0e-3                   # global end time (s)
+    Tstop = 5.0e-4                   # global end time (s)
     #Tstop = 2.0e-1                   # global end time (s)
     t = Constant(0.0)                # time constant
 
@@ -159,13 +159,13 @@ if __name__ == "__main__":
     # Set solver parameters EMI (True is direct, and False is iterate) 
     direct_emi = False
     rtol_emi = 1E-5
-    atol_emi = 1E-13
+    atol_emi = 1E-40
     threshold_emi = 0.9
 
     # Set solver parameters KNP (True is direct, and False is iterate) 
     direct_knp = False
     rtol_knp = 1E-7
-    atol_knp = 2E-17
+    atol_knp = 2E-40
     threshold_knp = 0.75
 
     # Set parameters

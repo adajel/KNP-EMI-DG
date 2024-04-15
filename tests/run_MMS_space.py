@@ -186,8 +186,8 @@ if __name__ == '__main__':
         # Set solver parameters EMI (True is direct, and False is iterate) 
         direct_emi = True
 
-        rtol_emi = 1E-5
-        atol_emi = 1E-13
+        rtol_emi = 1E-6
+        atol_emi = 1E-40
         threshold_emi = 0.9
 
         # Set solver parameters KNP (True is direct, and False is iterate) 

@@ -124,10 +124,10 @@ def rhs_numba(t, states, values, parameters):
     i_K = parameters[1] * (states[0] - parameters[3])
 
     # set I_ch_Na
-    parameters[6]
+    parameters[6] = i_Na
     # set I_ch_K
-    parameters[7]
+    parameters[7] = i_K
     # set I_ch_Cl
-    parameters[8]
+    parameters[8] = 0.0
 
     values[0] = (- i_K - i_Na)/parameters[4]
