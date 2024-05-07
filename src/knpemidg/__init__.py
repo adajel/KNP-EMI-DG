@@ -10,7 +10,7 @@ from knpemidg.utils import minus
 from knpemidg.utils import pcws_constant_project
 from knpemidg.utils import CellCenterDistance
 from knpemidg.solver import Solver
-#from knpemidg.solver_emi import SolverEMI
+from knpemidg.solver_emi import SolverEMI
 
 __all__ = ["Solver", "MembraneModel", "subdomain_marking_foo",
         "interface_normal", "plus", "minus", "pcws_constant_project",

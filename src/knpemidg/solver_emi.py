@@ -59,7 +59,7 @@ class bcolors:
 # Normal will always point from lower to higher (e.g. from 0 -> 1)
 # NB! The code assumes that all interior facets are tagged with 0.
 
-class Solver:
+class SolverEMI:
     def __init__(self, params, ion_list, degree_emi=1, degree_knp=1, mms=None, sf=1):
         """
         Initialize solver
@@ -76,9 +76,7 @@ class Solver:
         # timers
         self.ode_solve_timer = 0
         self.emi_solve_timer = 0
-        self.knp_solve_timer = 0
         self.emi_ass_timer = 0
-        self.knp_ass_timer = 0
 
         return
 
@@ -99,7 +97,6 @@ class Solver:
 
         # facet area and normal
         self.n = FacetNormal(mesh)
-        self.hA_knp = CellDiameter(self.mesh)
         self.hA_emi = CellDiameter(self.mesh)
 
         # interface normal
@@ -108,11 +105,10 @@ class Solver:
         # DG penalty parameters
         self.gdim = self.mesh.geometry().dim()
         self.tau_emi = Constant(20*self.gdim*self.degree_emi)
-        self.tau_knp = Constant(20*self.gdim*self.degree_knp)
 
         # DG elements for ion concentrations and the potential
         self.PK_emi = FiniteElement('DG', mesh.ufl_cell(), self.degree_emi)
-        self.PK_knp = FiniteElement('DG', mesh.ufl_cell(), self.degree_knp)
+        self.PK_knp = self.PK_emi
 
         # For the MMS problem, we need unique tags for each of the interface walls
         if self.mms is not None:
@@ -166,8 +162,6 @@ class Solver:
         ME = MixedElement([self.PK_knp]*self.N_ions)
         self.V_knp = FunctionSpace(self.mesh, ME)
 
-        # function for solution concentrations
-        self.c = Function(self.V_knp)
         # function for previous solution concentrations in time stepping
         self.c_prev_n = Function(self.V_knp)
         # function for previous solution concentrations in Picard iteration
@@ -502,268 +496,6 @@ class Solver:
         return
 
 
-    def setup_varform_knp(self):
-        """ setup variational form for the knp system """
-
-        dx = self.dx; ds = self.ds; dS = self.dS    # measures
-        n = self.n; hA = self.hA_knp; n_g = self.n_g    # facet area and normal
-        tau_knp = self.tau_knp                      # penalty parameter
-        ion_list = self.ion_list                    # ion list
-        psi = self.psi; C_phi = self.C_phi          # physical parameters
-        C_M = self.C_M; F = self.F                  # physical parameters
-        phi = self.phi                              # potential
-
-        us = TrialFunctions(self.V_knp)
-        vs = TestFunctions(self.V_knp)
-
-        # initialize form
-        a = 0; L = 0
-
-        for idx, ion in enumerate(ion_list[:-1]):
-            # get trial and test functions
-            u_c = us[idx]
-            v_c = vs[idx]
-
-            # get previous concentration
-            c_n_ = split(self.c_prev_n)[idx]
-            c_k_ = split(self.c_prev_k)[idx]
-
-            # get valence and diffusion coefficients
-            z = ion['z']; D = ion['D']
-
-            # upwinding: We first define function un returning:
-            #       dot(u,n)    if dot(u, n) >  0
-            #       0           if dot(u, n) <= 0
-            #
-            # We would like to upwind s.t.
-            #   c('+') is chosen if dot(u, n('+')) > 0,
-            #   c('-') is chosen if dot(u, n('+')) < 0.
-            #
-            # The expression:
-            #       un('+')*c('+') - un('-')*c('-') = jump(un*c)
-            #
-            # give this. Given n('+') = -n('-'), we have that:
-            #   dot(u, n('+')) > 0
-            #   dot(u, n('-')) < 0.
-            # As such, if dot(u, n('+')) > 0, we have that:
-            #   un('+') is dot(u, n), and
-            #   un('-') = 0.
-            # and the expression above becomes un('+')*c('+') - 0*c('-') =
-            # un('+')*c('+').
-
-            # define upwind help function
-            un = 0.5*(dot(D * grad(phi), n) + abs(dot(D * grad(phi), n)))
-
-            # equation ion concentration diffusive term with SIP (symmetric)
-            a += 1.0/self.dt * u_c * v_c * dx \
-               + inner(D * grad(u_c), grad(v_c)) * dx \
-               - inner(dot(avg(D * grad(u_c)), n('+')), jump(v_c)) * dS(0) \
-               - inner(dot(avg(D * grad(v_c)), n('+')), jump(u_c)) * dS(0) \
-               + tau_knp/avg(hA) * inner(jump(D * u_c), jump(v_c)) * dS(0)
-
-            # drift (advection) terms + upwinding
-            a += + z * psi * inner(D * u_c * grad(phi), grad(v_c)) * dx \
-                 - z * psi * jump(v_c) * jump(un * u_c) * dS(0)
-
-            # add terms for approximating time derivative
-            L += 1.0/self.dt * c_n_ * v_c * dx
-
-            if self.mms is None:
-                # calculate alpha
-                alpha = D * z * z * c_k_ / self.alpha_sum
-
-                # calculate coupling coefficient
-                C = alpha * C_M / (F * z * self.dt)
-
-                # loop through each membrane model
-                for jdx, mm in enumerate(self.mem_models):
-
-                    # get facet tag
-                    tag = mm['ode'].tag
-
-                    if self.splitting_scheme:
-                        # robin condition with splitting
-                        g_robin_knp = self.phi_M_prev_PDE \
-                                    - self.dt / (C_M * alpha) * mm['I_ch_k'][ion['name']] \
-                                    + (self.dt / C_M) * self.I_ch[jdx]
-                    else:
-                        # original robin condition (without splitting)
-                        g_robin_knp = self.phi_M_prev_PDE \
-                                    - self.dt / (C_M * alpha) * mm['I_ch_k'][ion['name']]
-
-                    # add coupling condition at interface
-                    L += JUMP(C * g_robin_knp * v_c, self.n_g) * dS(tag)
-
-                    # add coupling terms on interface gamma
-                    L += - jump(phi) * jump(C) * avg(v_c) * dS(tag) \
-                         - jump(phi) * avg(C) * jump(v_c) * dS(tag)
-
-            # add terms for manufactured solutions test
-            if self.mms is not None:
-                # get mms data
-                fc1 = ion['f1']
-                fc2 = ion['f2']
-                g_robin_knp_1 = ion['g_robin_1']
-                g_robin_knp_2 = ion['g_robin_2']
-
-                # get global coupling coefficients
-                C = ion['C']; C_1 = ion['C_sub'][1]; C_2 = ion['C_sub'][0]
-
-                lm_tags = self.lm_tags
-
-                # MMS specific: add source terms
-                L += inner(fc1, v_c)*dx(1) \
-                   + inner(fc2, v_c)*dx(0) \
-
-                # coupling terms on interface gamma
-                L += - sum(jump(phi) * jump(C) * avg(v_c) * dS(tag) for tag in lm_tags) \
-                     - sum(jump(phi) * avg(C) * jump(v_c) * dS(tag) for tag in lm_tags)
-
-                # define robin condition on interface gamma
-                L += sum(inner(C_1 * g_robin_knp_1[tag], minus(v_c, n_g)) * dS(tag) for tag in lm_tags) \
-                   - sum(inner(C_2 * g_robin_knp_2[tag], plus(v_c, n_g)) * dS(tag) for tag in lm_tags)
-
-                # MMS specific: add neumann contribution
-                L += - dot(ion['bdry'], n) * v_c * ds
-
-        # set forms lhs (A) and rhs (L)
-        self.A_knp = a
-        self.L_knp = L
-
-        return
-
-    def setup_solver_knp(self):
-        """ setup KSP solver for KNP sub-problem """
-
-        # create solver
-        ksp = PETSc.KSP().create()
-
-        if self.direct_knp:
-            # set options direct solver
-            opts = PETSc.Options("KNP_DIR")  # get options
-            opts["mat_mumps_icntl_4"] = 1    # set amount of info output
-            opts["mat_mumps_icntl_14"] = 40  # set percentage of ???
-
-            pc = ksp.getPC()                 # get pc
-            pc.setType("lu")                 # set solver to LU
-            pc.setFactorSolverType("mumps")  # set LU solver to use mumps
-            ksp.setOptionsPrefix("KNP_DIR")
-            ksp.setFromOptions()             # update ksp with options set above
-        else:
-            # set options iterative solver
-            opts = PETSc.Options('KNP_ITER')
-            opts.setValue('ksp_type', 'gmres')
-            opts.setValue('ksp_min_it', 5)
-            opts.setValue("ksp_max_it", 1000)
-            opts.setValue('pc_type', 'hypre')
-            opts.setValue("ksp_converged_reason", None)
-            opts.setValue("ksp_initial_guess_nonzero", 1)
-            opts.setValue("ksp_view", None)
-            opts.setValue("ksp_monitor_true_residual", None)
-
-            opts.setValue('ksp_rtol', self.rtol_knp)
-            opts.setValue('ksp_atol', self.atol_knp)
-            if self.threshold_knp is not None:
-                opts.setValue('pc_hypre_boomeramg_strong_threshold', self.threshold_knp)
-
-            ksp.setOptionsPrefix('KNP_ITER')
-            ksp.setFromOptions()
-
-        # set knp solver
-        self.ksp_knp = ksp
-
-        # timer start
-        ts = time.perf_counter()
-
-        # assemble
-        AA_knp, bb_knp = map(assemble, (self.A_knp, self.L_knp))
-        self.AA_knp = as_backend_type(AA_knp)
-        self.bb_knp = as_backend_type(bb_knp)
-
-        self.x_knp, _ = self.AA_knp.mat().createVecs()
-        self.x_knp.axpy(1, as_backend_type(self.c.vector()).vec())
-
-        # timer end
-        te = time.perf_counter()
-        self.knp_ass_timer +=  te - ts
-
-        return
-
-    def solve_knp(self):
-        """ solve knp system """
-
-        # timer start
-        ts = time.perf_counter()
-
-        # reassemble matrices and vector
-        assemble(self.A_knp, self.AA_knp)
-        assemble(self.L_knp, self.bb_knp)
-
-        # convert matrices and vector
-        AA_knp = self.AA_knp.mat()
-        bb_knp = self.bb_knp.vec()
-        x_knp = self.x_knp
-
-        # solution vector
-        #x_knp *= 0.
-        #x_knp.axpy(1, as_backend_type(self.c.vector()).vec())
-
-        # timer end
-        te = time.perf_counter()
-        res = te - ts
-        print(f"{bcolors.OKGREEN} CPU Execution time PDE assemble knp: {res:.4f} seconds {bcolors.ENDC}")
-        self.knp_ass_timer += res
-
-        # write assembly time to file
-        if self.filename is not None:
-            self.file_knp_assem.write("ass_time: %.4f \n" % (res))
-
-        if self.direct_knp:
-            # set operators
-            AA_knp.convert(PETSc.Mat.Type.AIJ)
-            self.ksp_knp.setOperators(AA_knp, AA_knp)
-
-            # solve knp system with direct solver
-            ts = time.perf_counter()            # timer start
-            self.ksp_knp.solve(bb_knp, x_knp)   # solve
-            te = time.perf_counter()            # timer end
-
-            # print and write CPU solve time to file
-            res = te - ts
-            print(f"{bcolors.OKGREEN} CPU Execution time PDE solve knp: {res:.4f} seconds {bcolors.ENDC}")
-            self.knp_solve_timer += res
-
-            if self.filename is not None:
-                self.file_knp_solve.write("solve_time: %.4f \n" % (res))
-        else:
-            # set operators
-            self.ksp_knp.setOperators(AA_knp, AA_knp)
-
-            # solve the knp system with iterative solver
-            ts = time.perf_counter()            # timer start
-            self.ksp_knp.solve(bb_knp, x_knp)   # solve system
-            te = time.perf_counter()            # timer end
-
-            # print and write CPU solve time to file
-            res = te - ts
-            print(f"{bcolors.OKGREEN} CPU Execution time PDE solve knp: {res:.4f} seconds {bcolors.ENDC}")
-            self.knp_solve_timer += res
-
-            # print and write number of iterations
-            niters = self.ksp_knp.getIterationNumber()
-
-            if self.filename is not None:
-                self.file_knp_solve.write("solve_time: %.4f \n" % (res))
-                self.file_knp_niter.write("niter: %d \n" % niters)
-
-        # assign new value to function c
-        self.c.vector().vec().array_w[:] = x_knp.array_r[:]
-        # make assign above work in parallel
-        self.c.vector().vec().ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
-
-        return
-
-
     def solve_for_time_step(self, k, t):
         """ solve system for one global time step dt"""
 
@@ -775,128 +507,14 @@ class Solver:
         # Step I: solve emi equations with known concentrations to obtain phi
         self.solve_emi()
 
-        # Step II: solve knp equations with known phi to obtain concentrations
-        self.solve_knp()
-
-        # update previous concentrations
-        self.c_prev_k.assign(self.c)
-        self.c_prev_n.assign(self.c)
-
         # update membrane potential
         phi_M_step_I = JUMP(self.phi, self.n_g)
         assign(self.phi_M_prev_PDE, pcws_constant_project(phi_M_step_I, self.Q))
-
-        # get physical parameters
-        F = self.F; R = self.R; temperature = self.temperature
-
-        # variable for eliminated ion concentration
-        c_elim = 0
-
-        ion_list = self.ion_list
-
-        # update Nernst potentials for next global time level
-        for idx, ion in enumerate(ion_list[:-1]):
-            # get current solution concentration
-            c_k_ = split(self.c_prev_k)[idx]
-            # update Nernst potential
-            E = R * temperature / (F * ion['z']) * ln(plus(c_k_, self.n_g) / minus(c_k_, self.n_g))
-            ion['E'].assign(pcws_constant_project(E, self.Q))
-
-            # add ion specific contribution to eliminated ion concentration
-            c_elim += - (1.0 / ion_list[-1]['z']) * ion['z'] * c_k_
-
-        # update eliminated ion concentration
-        self.ion_list[-1]['c'].assign(project(c_elim, \
-                self.V_knp.sub(self.N_ions - 1).collapse()))
-
-        # update Nernst potential for eliminated ion
-        E = R * temperature / (F * ion_list[-1]['z']) * ln(plus(ion_list[-1]['c'], self.n_g) / minus(ion_list[-1]['c'], self.n_g))
-        ion_list[-1]['E'].assign(pcws_constant_project(E, self.Q))
 
         # update time
         t.assign(float(t + self.dt))
 
         return
-
-
-    def solve_for_time_step_picard(self, k, t):
-        """ solve system for one global time step using Picard iterations """
-
-        print("------------------------------------------------")
-        print(f"{bcolors.WARNING} t = {float(t)} {bcolors.ENDC}")
-        print(f"{bcolors.WARNING} k = {k} {bcolors.ENDC}")
-        print("------------------------------------------------")
-
-        # update time
-        t.assign(float(t + self.dt))
-
-        # define picard parameters
-        tol = 1.0e-4    # tolerance
-        eps = 2.0       # set eps bigger than tolerance initially
-        max_iter = 25   # max number of iterations
-        iter = 0        # counter for number of iterations
-
-        # inner Picard iteration to solve PDEs
-        while eps > tol:
-
-            iter += 1
-
-            # solve emi equation for potential with previous concentrations
-            self.solve_emi()
-
-            # solve knp equations for concentrations with known phi
-            self.solve_knp()
-
-            # calculate diff between current and previous Picard iteration
-            diff = self.c_prev_k.vector() - self.c.vector()
-            eps = np.linalg.norm(diff, ord=np.Inf)
-
-            # update previous concentrations for next Picard level
-            self.c_prev_k.assign(self.c)
-
-            # get physical parameters
-            F = self.F; R = self.R; temperature = self.temperature
-
-            c_elim = 0
-
-            ion_list = self.ion_list
-
-            # update Nernst potentials for next Picard level
-            for idx, ion in enumerate(ion_list[:-1]):
-                # get current solution concentration
-                c_k_ = split(self.c_prev_k)[idx]
-                # update Nernst potential
-                E = R * temperature / (F * ion['z']) * ln(plus(c_k_, self.n_g) / minus(c_k_, self.n_g))
-                ion['E'].assign(pcws_constant_project(E, self.Q))
-
-                # add ion specific contribution to eliminated ion concentration
-                c_elim += - (1.0 / ion_list[-1]['z']) * ion['z'] * c_k_
-
-            # update eliminated ion concentration for next Picard level
-            ion_list[-1]['c'].assign(project(c_elim, \
-            self.V_knp.sub(self.N_ions - 1).collapse()))
-
-            # update Nernst potential for eliminated ion
-            E = R * temperature / (F * ion_list[-1]['z']) * ln(plus(ion_list[-1]['c'], self.n_g) / minus(ion_list[-1]['c'], self.n_g))
-            ion_list[-1]['E'].assign(pcws_constant_project(E, self.Q))
-
-            # exit if iteration exceeds maximum number of iterations
-            if iter > max_iter:
-                print("Picard solver diverged")
-                sys.exit(2)
-
-        # update previous concentrations for next global time step
-        self.c_prev_n.assign(self.c_prev_k)
-
-        # update membrane potential
-        phi_M_step_I = JUMP(self.phi, self.n_g)
-        assign(self.phi_M_prev_PDE, pcws_constant_project(phi_M_step_I, self.Q))
-
-        # print Picard output
-        print(f"{bcolors.OKCYAN} Summary Picard: eps = {eps},, #iters = {iter} {bcolors.ENDC}")
-
-        return
-
 
     def solve_system_passive(self, Tstop, t, solver_params, membrane_params, filename=None):
         """
@@ -909,10 +527,6 @@ class Solver:
         self.rtol_emi = solver_params.rtol_emi           # relative tolerance emi
         self.atol_emi = solver_params.atol_emi           # absolute tolerance emi
         self.threshold_emi = solver_params.threshold_emi # threshold emi
-        self.direct_knp = solver_params.direct_knp       # choice of solver knp
-        self.rtol_knp = solver_params.rtol_knp           # relative tolerance knp
-        self.atol_knp = solver_params.atol_knp           # absolute tolerance knp
-        self.threshold_knp = solver_params.threshold_knp # threshold knp
 
         self.splitting_scheme = False                    # no splitting scheme
 
@@ -921,11 +535,9 @@ class Solver:
 
         # Setup variational formulations
         self.setup_varform_emi()
-        self.setup_varform_knp()
 
         # Setup solvers
         self.setup_solver_emi()
-        self.setup_solver_knp()
 
         # Initialize save results
         if filename is not None:
@@ -951,7 +563,6 @@ class Solver:
             # Save results
             if (k % self.sf) == 0 and filename is not None:
                 self.save_h5()      # fields
-                self.save_solver(k) # solver statistics
 
         # Close files
         if filename is not None:
@@ -959,7 +570,7 @@ class Solver:
             self.close_save_solver()
 
         # combine solution for the potential and concentrations
-        uh = split(self.c) + (self.phi,)
+        uh = split(self.c_prev_k) + (self.phi,)
 
         return uh, self.ion_list[-1]['c']
 
@@ -973,10 +584,6 @@ class Solver:
         self.rtol_emi = solver_params.rtol_emi           # relative tolerance emi
         self.atol_emi = solver_params.atol_emi           # absolute tolerance emi
         self.threshold_emi = solver_params.threshold_emi # threshold emi
-        self.direct_knp = solver_params.direct_knp       # choice of solver knp
-        self.rtol_knp = solver_params.rtol_knp           # relative tolerance knp
-        self.atol_knp = solver_params.atol_knp           # absolute tolerance knp
-        self.threshold_knp = solver_params.threshold_knp # threshold knp
 
         stimulus = self.stimulus
         stimulus_locator = self.stimulus_locator
@@ -988,11 +595,9 @@ class Solver:
 
         # Setup variational formulations
         self.setup_varform_emi()
-        self.setup_varform_knp()
 
         # Setup solvers
         self.setup_solver_emi()
-        self.setup_solver_knp()
 
         # Calculate ODE time step (s)
         dt_ode = float(self.dt)
@@ -1051,7 +656,6 @@ class Solver:
             # Save results
             if (k % self.sf) == 0 and filename is not None:
                 self.save_h5()      # fields
-                self.save_solver(k) # solver statistics
 
         # Close files
         if filename is not None:
@@ -1095,65 +699,16 @@ class Solver:
         self.file_emi_assem.write("num cells: %d \n" % num_cells)
         self.file_emi_assem.write("dofs: %d \n" % dofs_emi)
 
-        if self.direct_knp:
-            self.file_knp_solve = open(path_timings + "knp_solve_dir_%d.txt" % reso, "w")
-            self.file_knp_assem = open(path_timings + "knp_assem_dir_%d.txt" % reso, "w")
-            self.file_knp_niter = None
-        else:
-            self.file_knp_solve = open(path_timings + "knp_solve_%d.txt" % reso, "w")
-            self.file_knp_assem = open(path_timings + "knp_assem_%d.txt" % reso, "w")
-            self.file_knp_niter = open(path_timings + "knp_niter_%d.txt" % reso, "w")
-
-            self.file_knp_niter.write("num cells: %d \n" % num_cells)
-            self.file_knp_niter.write("dofs: %d \n" % dofs_knp)
-
-        self.file_knp_solve.write("num cells: %d \n" % num_cells)
-        self.file_knp_solve.write("dofs: %d \n" % dofs_knp)
-        self.file_knp_assem.write("num cells: %d \n" % num_cells)
-        self.file_knp_assem.write("dofs: %d \n" % dofs_knp)
-
-        # open files for saving bulk results
-        self.f_pot = File('results/active_knp/pot.pvd')
-        self.f_pot_grad = File('results/active_knp/pot_grad.pvd')
-        self.f_Na = File('results/active_knp/Na.pvd')
-        self.f_K = File('results/active_knp/K.pvd')
-        self.f_Cl = File('results/active_knp/Cl.pvd')
-        self.f_kappa = File('results/active_knp/Kappa.pvd')
-
         return
-
-    def save_solver(self, k):
-            # just for debugging
-            phi = self.phi
-
-            VDG1 = VectorFunctionSpace(self.mesh, "DG", 0)
-            VDG0 = FunctionSpace(self.mesh, "DG", 0)
-
-            phi_ = project(grad(phi), VDG1)
-            K_ = project(self.c.split()[0], VDG0)
-            Cl_ = project(self.c.split()[1], VDG0)
-            Na_ = project(self.ion_list[-1]['c'], VDG0)
-
-            self.f_pot << (phi, k)
-            self.f_Na << (Na_, k)
-            self.f_K << (K_, k)
-            self.f_Cl << (Cl_, k)
-
-            self.f_kappa << (project(self.kappa, VDG0), k)
-
-            return
 
     def close_save_solver(self):
 
         if not self.direct_emi:
             self.file_emi_niter.close()
-            self.file_knp_niter.close()
 
         #self.file_phi_M_1.close()
         self.file_emi_solve.close()
-        self.file_knp_solve.close()
         self.file_emi_assem.close()
-        self.file_knp_assem.close()
 
         return
 
@@ -1166,7 +721,7 @@ class Solver:
         self.h5_file.write(self.subdomains, '/subdomains')
         self.h5_file.write(self.surfaces, '/surfaces')
 
-        self.h5_file.write(self.c, '/concentrations',  self.h5_idx)
+        self.h5_file.write(self.c_prev_k, '/concentrations',  self.h5_idx)
         self.h5_file.write(self.ion_list[-1]['c'], '/elim_concentration',  self.h5_idx)
         self.h5_file.write(self.phi, '/potential', self.h5_idx)
 
@@ -1175,7 +730,7 @@ class Solver:
     def save_h5(self):
         """ save results to h5 file """
         self.h5_idx += 1
-        self.h5_file.write(self.c, '/concentrations',  self.h5_idx)
+        self.h5_file.write(self.c_prev_k, '/concentrations',  self.h5_idx)
         self.h5_file.write(self.ion_list[-1]['c'], '/elim_concentration',  self.h5_idx)
         self.h5_file.write(self.phi, '/potential', self.h5_idx)
 
