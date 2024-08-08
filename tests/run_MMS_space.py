@@ -3,8 +3,6 @@ import numpy as np
 import sys
 import os
 
-import matplotlib.pyplot as plt
-
 parameters['ghost_mode'] = 'shared_vertex'
 
 if __name__ == '__main__':
