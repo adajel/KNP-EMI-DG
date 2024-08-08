@@ -162,6 +162,8 @@ class SolverEMI:
         ME = MixedElement([self.PK_knp]*self.N_ions)
         self.V_knp = FunctionSpace(self.mesh, ME)
 
+        # function for solution concentrations
+        self.c = Function(self.V_knp)
         # function for previous solution concentrations in time stepping
         self.c_prev_n = Function(self.V_knp)
         # function for previous solution concentrations in Picard iteration
@@ -516,6 +518,55 @@ class SolverEMI:
 
         return
 
+
+    def solve_for_time_step_picard(self, k, t):
+        """ solve system for one global time step using Picard iterations """
+
+        print("------------------------------------------------")
+        print(f"{bcolors.WARNING} t = {float(t)} {bcolors.ENDC}")
+        print(f"{bcolors.WARNING} k = {k} {bcolors.ENDC}")
+        print("------------------------------------------------")
+
+        # update time
+        t.assign(float(t + self.dt))
+
+        # define picard parameters
+        tol = 1.0e-4    # tolerance
+        eps = 2.0       # set eps bigger than tolerance initially
+        max_iter = 25   # max number of iterations
+        iter = 0        # counter for number of iterations
+
+        # inner Picard iteration to solve PDEs
+        while eps > tol:
+
+            iter += 1
+
+            # solve emi equation for potential with previous concentrations
+            self.solve_emi()
+
+            # calculate diff between current and previous Picard iteration
+            diff = self.c_prev_k.vector() - self.c.vector()
+            eps = np.linalg.norm(diff, ord=np.Inf)
+
+            # exit if iteration exceeds maximum number of iterations
+            if iter > max_iter:
+                print("Picard solver diverged")
+                sys.exit(2)
+
+        # update previous concentrations for next global time step
+        self.c_prev_n.assign(self.c_prev_k)
+
+        # update membrane potential
+        phi_M_step_I = JUMP(self.phi, self.n_g)
+        assign(self.phi_M_prev_PDE, pcws_constant_project(phi_M_step_I, self.Q))
+
+        # print Picard output
+        print(f"{bcolors.OKCYAN} Summary Picard: eps = {eps},, #iters = {iter} {bcolors.ENDC}")
+
+        return
+
+
+>>>>>>> add solver_emi file
     def solve_system_passive(self, Tstop, t, solver_params, membrane_params, filename=None):
         """
         Solve system with passive membrane mechanisms
@@ -570,7 +621,7 @@ class SolverEMI:
             self.close_save_solver()
 
         # combine solution for the potential and concentrations
-        uh = split(self.c_prev_k) + (self.phi,)
+        uh = split(self.c) + (self.phi,)
 
         return uh, self.ion_list[-1]['c']
 
@@ -721,7 +772,7 @@ class SolverEMI:
         self.h5_file.write(self.subdomains, '/subdomains')
         self.h5_file.write(self.surfaces, '/surfaces')
 
-        self.h5_file.write(self.c_prev_k, '/concentrations',  self.h5_idx)
+        self.h5_file.write(self.c, '/concentrations',  self.h5_idx)
         self.h5_file.write(self.ion_list[-1]['c'], '/elim_concentration',  self.h5_idx)
         self.h5_file.write(self.phi, '/potential', self.h5_idx)
 
@@ -730,7 +781,7 @@ class SolverEMI:
     def save_h5(self):
         """ save results to h5 file """
         self.h5_idx += 1
-        self.h5_file.write(self.c_prev_k, '/concentrations',  self.h5_idx)
+        self.h5_file.write(self.c, '/concentrations',  self.h5_idx)
         self.h5_file.write(self.ion_list[-1]['c'], '/elim_concentration',  self.h5_idx)
         self.h5_file.write(self.phi, '/potential', self.h5_idx)
 
