@@ -192,7 +192,8 @@ class Solver:
         self.Q = FunctionSpace(self.mesh, 'Discontinuous Lagrange Trace', 0)
 
         # set initial membrane potential
-        self.phi_M_prev_PDE = pcws_constant_project(self.phi_M_init, self.Q)
+        #self.phi_M_prev_PDE = pcws_constant_project(self.phi_M_init, self.Q)
+        self.phi_M_prev_PDE = Function(self.Q)
 
         return
 
@@ -235,7 +236,7 @@ class Solver:
             # append to list of membrane models
             self.mem_models.append(mem_model)
 
-            return
+        return
 
 
     def setup_varform_emi(self):
@@ -407,6 +408,7 @@ class Solver:
             # set tolerances
             opts.setValue('ksp_rtol', self.rtol_emi)
             opts.setValue('ksp_atol', self.atol_emi)
+
             if self.threshold_emi is not None:
                 opts.setValue('pc_hypre_boomeramg_strong_threshold', self.threshold_emi)
 
@@ -663,6 +665,7 @@ class Solver:
 
             opts.setValue('ksp_rtol', self.rtol_knp)
             opts.setValue('ksp_atol', self.atol_knp)
+
             if self.threshold_knp is not None:
                 opts.setValue('pc_hypre_boomeramg_strong_threshold', self.threshold_knp)
 
@@ -905,14 +908,20 @@ class Solver:
 
         # Setup solver and parameters
         self.solver_params = solver_params               # parameters for solvers
+
         self.direct_emi = solver_params.direct_emi       # choice of solver emi
-        self.rtol_emi = solver_params.rtol_emi           # relative tolerance emi
-        self.atol_emi = solver_params.atol_emi           # absolute tolerance emi
-        self.threshold_emi = solver_params.threshold_emi # threshold emi
+
+        if not self.direct_emi:
+            self.rtol_emi = solver_params.rtol_emi           # relative tolerance emi
+            self.atol_emi = solver_params.atol_emi           # absolute tolerance emi
+            self.threshold_emi = solver_params.threshold_emi # threshold emi
+
         self.direct_knp = solver_params.direct_knp       # choice of solver knp
-        self.rtol_knp = solver_params.rtol_knp           # relative tolerance knp
-        self.atol_knp = solver_params.atol_knp           # absolute tolerance knp
-        self.threshold_knp = solver_params.threshold_knp # threshold knp
+
+        if not self.direct_knp:
+            self.rtol_knp = solver_params.rtol_knp           # relative tolerance knp
+            self.atol_knp = solver_params.atol_knp           # absolute tolerance knp
+            self.threshold_knp = solver_params.threshold_knp # threshold knp
 
         self.splitting_scheme = False                    # no splitting scheme
 
@@ -970,13 +979,18 @@ class Solver:
         # Setup solver and parameters
         self.solver_params = solver_params               # parameters for solvers
         self.direct_emi = solver_params.direct_emi       # choice of solver emi
-        self.rtol_emi = solver_params.rtol_emi           # relative tolerance emi
-        self.atol_emi = solver_params.atol_emi           # absolute tolerance emi
-        self.threshold_emi = solver_params.threshold_emi # threshold emi
+
+        if not self.direct_emi:
+            self.rtol_emi = solver_params.rtol_emi           # relative tolerance emi
+            self.atol_emi = solver_params.atol_emi           # absolute tolerance emi
+            self.threshold_emi = solver_params.threshold_emi # threshold emi
+
         self.direct_knp = solver_params.direct_knp       # choice of solver knp
-        self.rtol_knp = solver_params.rtol_knp           # relative tolerance knp
-        self.atol_knp = solver_params.atol_knp           # absolute tolerance knp
-        self.threshold_knp = solver_params.threshold_knp # threshold knp
+
+        if not self.direct_knp:
+            self.rtol_knp = solver_params.rtol_knp           # relative tolerance knp
+            self.atol_knp = solver_params.atol_knp           # absolute tolerance knp
+            self.threshold_knp = solver_params.threshold_knp # threshold knp
 
         stimulus = self.stimulus
         stimulus_locator = self.stimulus_locator
@@ -1014,8 +1028,13 @@ class Solver:
 
                 ode_model = mem_model['ode']
 
-                # Update initial values and parameters in ODE solver (based on previous PDEs step)
-                ode_model.set_membrane_potential(self.phi_M_prev_PDE)
+                # Update membrane potential in ODE solver (based on previous
+                # PDEs step) - except for the first step where phi_M_prev
+                # should be the initial condition in the ODE system
+                if k > 0:
+                    ode_model.set_membrane_potential(self.phi_M_prev_PDE)
+
+                # Update parameters in ODE solver (based on previous PDEs step)
                 ode_model.set_parameter('E_K', self.ion_list[0]['E'])
                 ode_model.set_parameter('E_Na', self.ion_list[2]['E'])
 

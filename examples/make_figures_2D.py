@@ -9,8 +9,8 @@ import sys
 from fenics import * 
 import string
 
-from utils import pcws_constant_project
-from utils import interface_normal, plus, minus
+from knpemidg.utils import pcws_constant_project
+from knpemidg.utils import interface_normal, plus, minus
 
 JUMP = lambda f, n: minus(f, n) - plus(f, n)
 
@@ -92,8 +92,8 @@ def get_time_series_membrane(dt, T, fname, x_, y_):
     hdf5file.read(subdomains, '/subdomains')
     hdf5file.read(surfaces, '/surfaces')
 
-    x_min = 2.74
-    x_max = 2.76
+    x_min = 24.15
+    x_max = 24.2
     y_min = 0.9
     y_max = 1.1
 
@@ -246,7 +246,7 @@ def get_time_series_gating(dt, T, fname, x_, y_):
 def plot_2D_concentration(res):
 
     dt = 1.0e-4
-    T = 5.0e-3
+    T = 1.0e-1
 
     temperature = 300 # temperature (K)
     F = 96485         # Faraday's constant (C/mol)

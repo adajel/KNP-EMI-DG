@@ -9,8 +9,8 @@ import sys
 from fenics import * 
 import string
 
-from utils import pcws_constant_project
-from utils import interface_normal, plus, minus
+from knpemidg.utils import pcws_constant_project
+from knpemidg.utils import interface_normal, plus, minus
 
 JUMP = lambda f, n: minus(f, n) - plus(f, n)
 
@@ -265,9 +265,6 @@ def plot_3D_concentration(res, T, dt):
     # get data axon A is stimulated
     fname = 'results/data/3D/results.h5'
 
-    # gating
-    n_HH, m_HH, h_HH = get_time_series_gating(dt, T, fname, x_M_A, y_M_A, z_M_A)
-
     # trace concentrations
     phi_M, E_Na, E_K = get_time_series_membrane(dt, T, fname, x_M_A, y_M_A, z_M_A)
 
@@ -325,12 +322,6 @@ def plot_3D_concentration(res, T, dt):
     plt.plot(E_K, linewidth=3)
     plt.plot(E_Na, linewidth=3)
 
-    ax6 = fig.add_subplot(3,3,9)
-    plt.title(r'gating')
-    plt.xlabel(r'time (ms)')
-    plt.plot(n_HH, linewidth=3, label="n")
-    plt.plot(m_HH, linewidth=3, label="m")
-    plt.plot(h_HH, linewidth=3, label="h")
     plt.legend()
 
     # make pretty
@@ -352,9 +343,8 @@ if not os.path.isdir('results/figures'):
     os.mkdir('results/figures')
 
 # create figures
-res_3D = '0' # mesh resolution for 3D axon bundle
+res_3D = '1' # mesh resolution for 3D axon bundle
 T = 1.0e-1
-#T = 5.0e-2
 dt = 1.0e-4
 
 plot_3D_concentration(res_3D, T, dt)

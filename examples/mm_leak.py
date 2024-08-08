@@ -33,16 +33,20 @@ def init_parameter_values(**values):
     # Membrane parameters
     g_leak_Na = 2.0*0.5   # Na leak conductivity (S/m**2)
     g_leak_K  = 8.0*0.5   # K leak conductivity (S/m**2)
+    # TODO
+    #g_leak_Na = 0.0   # Na leak conductivity (S/m**2)
+    #g_leak_K  = 0.0   # K leak conductivity (S/m**2)
 
     # Set initial parameter values
     init_values = np.array([g_leak_Na, g_leak_K, \
-                            0, 0, 0, 0, 0, 0, 0], dtype=np.float_)
+                            0, 0, 0, 0, 0, 0, 0, 0, 0], dtype=np.float_)
 
     # Parameter indices and limit checker
-    param_ind = dict([("g_leak_Na", 0), ("g_leak_K", 1), \
-                      ("E_Na", 2), ("E_K", 3), \
+    param_ind = dict([("g_leak_Na", 0), ("g_leak_K", 1),
+                      ("E_Na", 2), ("E_K", 3),
                       ("Cm", 4), ("stim_amplitude", 5),
-                      ("I_ch_Na", 6), ("I_ch_K", 7), ("I_ch_Cl", 8)])
+                      ("I_ch_Na", 6), ("I_ch_K", 7), ("I_ch_Cl", 8),
+                      ("K_e", 9), ("Na_i", 10)])
 
     for param_name, value in values.items():
         if param_name not in param_ind:
@@ -77,7 +81,8 @@ def parameter_indices(*params):
     param_inds = dict([("g_leak_Na", 0), ("g_leak_K", 1), \
                        ("E_Na", 2), ("E_K", 3), \
                        ("Cm", 4), ("stim_amplitude", 5), \
-                       ("I_ch_Na", 6), ("I_ch_K", 7), ("I_ch_Cl", 8)])
+                       ("I_ch_Na", 6), ("I_ch_K", 7), ("I_ch_Cl", 8),
+                       ("K_e", 9), ("Na_i", 10)])
 
     indices = []
     for param in params:
