@@ -566,7 +566,6 @@ class SolverEMI:
         return
 
 
->>>>>>> add solver_emi file
     def solve_system_passive(self, Tstop, t, solver_params, membrane_params, filename=None):
         """
         Solve system with passive membrane mechanisms
