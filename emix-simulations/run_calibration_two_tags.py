@@ -12,7 +12,6 @@ from collections import namedtuple
 from knpemidg import Solver
 import mm_hh as mm_hh
 import mm_glial as mm_glial
-import mm_leak as mm_leak
 
 # Define colors for printing
 class bcolors:
@@ -33,7 +32,7 @@ if __name__ == "__main__":
 
         # Time variables PDEs
         dt = 0.1                       # global time step (ms)
-        Tstop = 2                      # global end time (ms)
+        Tstop = 10                     # global end time (ms)
         t = Constant(0.0)              # time constant
 
         # Time variables ODEs
