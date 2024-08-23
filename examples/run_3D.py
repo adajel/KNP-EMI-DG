@@ -31,7 +31,7 @@ if __name__ == "__main__":
 
         # Time variables PDEs
         dt = 1.0e-4                      # global time step (s)
-        Tstop = 1.0e-1                  # global end time (s)
+        Tstop = 1.0e-1                   # global end time (s)
         t = Constant(0.0)                # time constant
 
         # Time variables ODEs
@@ -71,13 +71,17 @@ if __name__ == "__main__":
         Na_init_sub = {1:Na_i_init, 0:Na_e_init}
         K_init_sub = {1:K_i_init, 0:K_e_init}
         Cl_init_sub = {1:Cl_i_init, 0:Cl_e_init}
+        c_init_sub_type = 'constant'
 
         # Create ions (channel conductivity is set below in the membrane model)
-        Na = {'c_init_sub':Na_init_sub, 'bdry': Constant((0, 0)),
+        Na = {'c_init_sub':Na_init_sub, 'c_init_sub_type':c_init_sub_type,
+              'bdry': Constant((0, 0)),
               'z':1.0, 'name':'Na', 'D_sub':D_Na_sub}
-        K = {'c_init_sub':K_init_sub, 'bdry': Constant((0, 0)),
+        K = {'c_init_sub':K_init_sub, 'c_init_sub_type':c_init_sub_type,
+             'bdry': Constant((0, 0)),
              'z':1.0, 'name':'K', 'D_sub':D_K_sub}
-        Cl = {'c_init_sub':Cl_init_sub, 'bdry': Constant((0, 0)),
+        Cl = {'c_init_sub':Cl_init_sub, 'c_init_sub_type':c_init_sub_type,
+              'bdry': Constant((0, 0)),
               'z':-1.0, 'name':'Cl', 'D_sub':D_Cl_sub}
 
         # Create ion list. NB! The last ion in list will be eliminated, and

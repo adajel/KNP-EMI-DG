@@ -137,11 +137,13 @@ if __name__ == '__main__':
         a_init_sub = {1:ca1_init, 0:ca2_init}
         b_init_sub = {1:cb1_init, 0:cb2_init}
         c_init_sub = {1:cc1_init, 0:cc2_init}
+        c_init_sub_type = 'constant'
 
         # create ions
         ion_a = {'D_sub':D_a_sub,
                  'z':z_a,
                  'c_init_sub': a_init_sub,
+                 'c_init_sub_type': c_init_sub_type,
                  'f1': fca1, 'f2': fca2,
                  'g_robin_1': g_robin_a1, 'g_robin_2': g_robin_a2,
                  'bdry':bdry_a,
@@ -151,6 +153,7 @@ if __name__ == '__main__':
         ion_b = {'D_sub':D_b_sub,
                  'z':z_b,
                  'c_init_sub': b_init_sub,
+                 'c_init_sub_type': c_init_sub_type,
                  'f1': fcb1, 'f2': fcb2,
                  'g_robin_1': g_robin_b1, 'g_robin_2': g_robin_b2,
                  'bdry':bdry_b,
@@ -160,6 +163,7 @@ if __name__ == '__main__':
         ion_c = {'D_sub':D_c_sub,
                  'z':z_c,
                  'c_init_sub': c_init_sub,
+                 'c_init_sub_type': c_init_sub_type,
                  'f1': fcc1, 'f2': fcc2,
                  'g_robin_1': g_robin_c1, 'g_robin_2': g_robin_c2,
                  'bdry':bdry_c,

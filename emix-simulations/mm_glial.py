@@ -8,7 +8,7 @@ def init_state_values(**values):
     Initialize state values
     """
     # Init values
-    phi_M_init = -81.73542331243227
+    phi_M_init = -83.08511451850003
 
     init_values = np.array([phi_M_init], dtype=np.float_)
 
@@ -38,10 +38,10 @@ def init_parameter_values(**values):
 
     m_K = 2.0              # threshold ECS K (mol/m^3) - yao 2011
     m_Na = 7.7             # threshold ICS Na (mol/m^3) - yao 2011
-    I_max = 43             # max pump strength (muA/cm^2)
+    I_max = 50             # max pump strength (muA/cm^2)
 
-    K_i_init = 101.45093275680335
-    K_e_init = 3.369320617474813
+    K_i_init = 102.74050220804774
+    K_e_init = 3.32597273958481
 
     # Set initial parameter values
     init_values = np.array([g_Na_bar, g_K_bar, \
@@ -142,7 +142,7 @@ def rhs_numba(t, states, values, parameters):
     F = 96485e3                    # Faraday's constant (mC/ mol)
 
     # set conductance
-    E_K_init = R * temperature / F * np.log(parameters[16]/parameters[17])  #5
+    E_K_init = R * temperature / F * np.log(parameters[16]/parameters[17])
     dphi = states[0] - parameters[5]
     A = 1 + np.exp(18.4/42.4)                                  # shorthand
     B = 1 + np.exp(-(0.1186e3 + E_K_init)/0.0441e3)            # shorthand
@@ -154,7 +154,7 @@ def rhs_numba(t, states, values, parameters):
     i_Kir = parameters[3]*g_Kir*(states[0] - parameters[5])           # umol/(cm^2*ms)
 
     # Expressions for the Sodium channel component
-    i_Na = parameters[2] * (states[3] - parameters[4]) + 3 * i_pump
+    i_Na = parameters[2] * (states[0] - parameters[4]) + 3 * i_pump
 
     # Expressions for the Potassium channel component
     i_K = i_Kir - 2 * i_pump

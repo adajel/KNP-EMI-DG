@@ -486,7 +486,7 @@ if not os.path.isdir('results/figures'):
 
 # create figures
 res_3D = '0' # mesh resolution for 3D axon bundle
-T = 30
+T = 10
 dt = 0.1
 
 fname = 'results/data/3D_emi/results.h5'

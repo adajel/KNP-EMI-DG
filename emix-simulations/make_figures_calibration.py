@@ -161,8 +161,7 @@ def get_time_series_membrane(dt, T, fname, x, y, z):
         point_1 = y_min <= x[1] <= y_max \
               and x_min <= x[0] <= x_max \
               and z_min <= x[2] <= z_max
-        if point_1 and surfaces[facet] == 1:
-        #if surfaces[facet] == 1:
+        if point_1 and (surfaces[facet] == 1 or surfaces[facet] == 2):
             print(x[0], x[1], x[2])
             surfaces[facet] = 10
 
@@ -197,7 +196,7 @@ def get_time_series_membrane(dt, T, fname, x, y, z):
     f_K = Function(V)
 
     phi_M_s = []
-    phi_M_ODE_s = []
+    #phi_M_ODE_s = []
     E_Na_s = []
     E_K_s = []
 
@@ -212,9 +211,9 @@ def get_time_series_membrane(dt, T, fname, x, y, z):
             assign(phi_M, pcws_constant_project(phi_M_step, Q))
             phi_M_s.append(assemble(1.0/iface_size*avg(phi_M)*dS(10)))
 
-            hdf5file.read(w_phi_ODE, "/membranepotential/vector_" + str(n))
-            assign(f_phi_ODE, w_phi_ODE)
-            phi_M_ODE_s.append(assemble(1.0/iface_size*avg(f_phi_ODE)*dS(10)))
+            #hdf5file.read(w_phi_ODE, "/membranepotential/vector_" + str(n))
+            #assign(f_phi_ODE, w_phi_ODE)
+            #phi_M_ODE_s.append(assemble(1.0/iface_size*avg(f_phi_ODE)*dS(10)))
 
             # K concentrations
             hdf5file.read(v, "/concentrations/vector_" + str(n))
@@ -232,19 +231,112 @@ def get_time_series_membrane(dt, T, fname, x, y, z):
             E_Na_ = assemble(1.0/iface_size*avg(E_Na)*dS(10))
             E_Na_s.append(E_Na_)
 
-    return phi_M_s, phi_M_ODE_s, E_Na_s, E_K_s
+    return phi_M_s, phi_M_s, E_Na_s, E_K_s
 
-def plot_3D_concentration(res, T, dt, fname):
+def plot_3D_concentration_neuron(res, T, dt, fname):
 
     time = np.arange(0, T-dt, dt)
 
-    # original mesh
-    #x_M = 20
-    #y_M = 0.2
-    #z_M = 0.63
+    # new mesh
+    x_M = 6
+    y_M = 0.2
+    z_M = 0.53
+
+    # 0.05 um above axon A (ECS)
+    x_e = x_M; y_e = y_M + 0.1; z_e = z_M
+    # mid point inside axon A (ICS)
+    x_i = x_M; y_i = y_M - 0.1; z_i = z_M
+
+    # trace concentrations
+    phi_M, phi_M_ODE, E_Na, E_K = get_time_series_membrane(dt, T, fname, x_M, y_M, z_M)
+
+    # bulk concentrations
+    Na_e, K_e, Cl_e, _ = get_time_series(dt, T, fname, x_e, y_e, z_e)
+    Na_i, K_i, Cl_i, _ = get_time_series(dt, T, fname, x_i, y_i, z_i)
+
+    #################################################################
+    # get data axons BC are stimulated
+
+    # Concentration plots
+    fig = plt.figure(figsize=(12*0.9,12*0.9))
+    ax = plt.gca()
+
+    ax1 = fig.add_subplot(3,3,1)
+    plt.title(r'Na$^+$ concentration (ECS)')
+    plt.ylabel(r'[Na]$_e$ (mM)')
+    plt.plot(Na_e, linewidth=3, color='b')
+
+    ax3 = fig.add_subplot(3,3,2)
+    plt.title(r'K$^+$ concentration (ECS)')
+    plt.ylabel(r'[K]$_e$ (mM)')
+    plt.plot(K_e, linewidth=3, color='b')
+
+    ax3 = fig.add_subplot(3,3,3)
+    plt.title(r'Cl$^-$ concentration (ECS)')
+    plt.ylabel(r'[Cl]$_e$ (mM)')
+    plt.plot(Cl_e, linewidth=3, color='b')
+
+    ax2 = fig.add_subplot(3,3,4)
+    plt.title(r'Na$^+$ concentration (ICS)')
+    plt.ylabel(r'[Na]$_i$ (mM)')
+    plt.plot(Na_i,linewidth=3, color='r')
+
+    ax2 = fig.add_subplot(3,3,5)
+    plt.title(r'K$^+$ concentration (ICS)')
+    plt.ylabel(r'[K]$_i$ (mM)')
+    plt.plot(K_i,linewidth=3, color='r')
+
+    ax2 = fig.add_subplot(3,3,6)
+    plt.title(r'Cl$^-$ concentration (ICS)')
+    plt.ylabel(r'[Cl]$_i$ (mM)')
+    plt.plot(Cl_i,linewidth=3, color='r')
+
+    ax5 = fig.add_subplot(3,3,7)
+    plt.title(r'Membrane potential')
+    plt.ylabel(r'$\phi_M$ (mV)')
+    plt.xlabel(r'time (ms)')
+    plt.plot(phi_M, linewidth=3)
+
+    ax6 = fig.add_subplot(3,3,8)
+    plt.title(r'Na$^+$ reversal potential')
+    plt.ylabel(r'E$_Na$ (mV)')
+    plt.xlabel(r'time (ms)')
+    plt.plot(E_K, linewidth=3)
+    plt.plot(E_Na, linewidth=3)
+
+    ax7 = fig.add_subplot(3,3,9)
+    plt.title(r'Membrane potential ODE')
+    plt.plot(phi_M_ODE, linewidth=3)
+
+    print("membrane potential", phi_M[-1])
+    print("membrane potential", phi_M_ODE[-1])
+    #print("Na_e", Na_e[-1])
+    #print("Na_i", Na_i[-1])
+    #print("K_i", K_i[-1])
+    #print("K_e", K_e[-1])
+    #print("Cl_i", Cl_i[-1])
+    #print("Cl_e", Cl_e[-1])
+
+    # make pretty
+    ax.axis('off')
+    plt.tight_layout()
+
+    # save figure to file
+    plt.savefig('results/figures/callibrate_cell_1.svg', format='svg')
+
+    f_phi_M = open('phi_M_3D.txt', "w")
+    for p in phi_M:
+        f_phi_M.write("%.10f \n" % p*1000)
+    f_phi_M.close()
+
+    return
+
+def plot_3D_concentration_glial(res, T, dt, fname):
+
+    time = np.arange(0, T-dt, dt)
 
     # new mesh
-    x_M = 8
+    x_M = 6
     y_M = 0.8
     z_M = 1.23
 
@@ -270,7 +362,6 @@ def plot_3D_concentration(res, T, dt, fname):
     ax1 = fig.add_subplot(3,3,1)
     plt.title(r'Na$^+$ concentration (ECS)')
     plt.ylabel(r'[Na]$_e$ (mM)')
-    #plt.ylim([90, 110])
     plt.plot(Na_e, linewidth=3, color='b')
 
     ax3 = fig.add_subplot(3,3,2)
@@ -286,25 +377,21 @@ def plot_3D_concentration(res, T, dt, fname):
     ax2 = fig.add_subplot(3,3,4)
     plt.title(r'Na$^+$ concentration (ICS)')
     plt.ylabel(r'[Na]$_i$ (mM)')
-    #plt.ylim([99, 101])
     plt.plot(Na_i,linewidth=3, color='r')
 
     ax2 = fig.add_subplot(3,3,5)
     plt.title(r'K$^+$ concentration (ICS)')
     plt.ylabel(r'[K]$_i$ (mM)')
-    #plt.ylim([4, 4.2])
     plt.plot(K_i,linewidth=3, color='r')
 
     ax2 = fig.add_subplot(3,3,6)
     plt.title(r'Cl$^-$ concentration (ICS)')
     plt.ylabel(r'[Cl]$_i$ (mM)')
-    #plt.ylim([103, 105])
     plt.plot(Cl_i,linewidth=3, color='r')
 
     ax5 = fig.add_subplot(3,3,7)
     plt.title(r'Membrane potential')
     plt.ylabel(r'$\phi_M$ (mV)')
-    #plt.ylim([-71.3, -71.2])
     plt.xlabel(r'time (ms)')
     plt.plot(phi_M, linewidth=3)
 
@@ -317,7 +404,6 @@ def plot_3D_concentration(res, T, dt, fname):
 
     ax7 = fig.add_subplot(3,3,9)
     plt.title(r'Membrane potential ODE')
-    #plt.ylim([-71.3, -71.2])
     plt.plot(phi_M_ODE, linewidth=3)
 
     print("membrane potential", phi_M[-1])
@@ -334,7 +420,7 @@ def plot_3D_concentration(res, T, dt, fname):
     plt.tight_layout()
 
     # save figure to file
-    plt.savefig('results/figures/callibrate.svg', format='svg')
+    plt.savefig('results/figures/callibrate_cell_2.svg', format='svg')
 
     f_phi_M = open('phi_M_3D.txt', "w")
     for p in phi_M:
@@ -342,6 +428,7 @@ def plot_3D_concentration(res, T, dt, fname):
     f_phi_M.close()
 
     return
+
 
 def plot_surface(fname, T, dt):
 
@@ -352,7 +439,7 @@ def plot_surface(fname, T, dt):
     subdomains = MeshFunction("size_t", mesh, 2)
     surfaces = MeshFunction("size_t", mesh, 1)
     hdf5file.read(mesh, '/mesh', False)
-    mesh.coordinates()[:] *= 1e7
+    mesh.coordinates()[:] *= 1e4
     hdf5file.read(subdomains, '/subdomains')
     hdf5file.read(surfaces, '/surfaces')
 
@@ -623,12 +710,13 @@ res_3D = '0' # mesh resolution for 3D axon bundle
 dt = 0.1
 T = 10
 
-#fname = 'results/data/EMIX/results.h5'
+#fname = 'results/data/calibration_two_tags/results.h5'
+fname = 'results/data/two_tags/results.h5'
+
 #plot_surface(fname, T, dt)
-#plot_surface_time(fname, T, dt)
+plot_3D_concentration_neuron(res_3D, T, dt, fname)
+plot_3D_concentration_glial(res_3D, T, dt, fname)
+write_to_pvd(dt, T, fname)
 
-fname = 'results/data/calibration/results.h5'
-plot_3D_concentration(res_3D, T, dt, fname)
-
-#write_to_pvd(dt, T, fname)
 #get_velocity(fname, T, dt)
+#plot_surface_time(fname, T, dt)

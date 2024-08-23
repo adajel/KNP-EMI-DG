@@ -32,7 +32,7 @@ if __name__ == "__main__":
 
         # Time variables PDEs
         dt = 1.0e-4                      # global time step (s)
-        Tstop = 5.0e-2                  # global end time (s)
+        Tstop = 5.0e-2                   # global end time (s)
         t = Constant(0.0)                # time constant
 
         # Time variables ODEs

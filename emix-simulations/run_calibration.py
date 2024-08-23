@@ -11,8 +11,8 @@ from collections import namedtuple
 
 from knpemidg import Solver
 import mm_hh as mm_hh
-
-#import mm_glial as mm_glial
+import mm_glial as mm_glial
+import mm_leak as mm_leak
 
 # Define colors for printing
 class bcolors:
@@ -134,13 +134,13 @@ if __name__ == "__main__":
         surfaces = MeshFunction('size_t', mesh, surfaces_path)
 
         # Set solver parameters EMI (True is direct, and False is iterate)
-        direct_emi = True
+        direct_emi = False
         rtol_emi = 1E-5
         atol_emi = 1E-40
         threshold_emi = 0.9
 
         # Set solver parameters KNP (True is direct, and False is iterate)
-        direct_knp = True
+        direct_knp = False
         rtol_knp = 1E-7
         atol_knp = 2E-40
         threshold_knp = 0.75
@@ -159,7 +159,8 @@ if __name__ == "__main__":
         fname = "results/data/calibration/"
 
         # Dictionary with membrane models (key is facet tag, value is ode model)
-        ode_models = {1: mm_hh}
+        #ode_models = {1: mm_hh}
+        ode_models = {1: mm_leak}
         #ode_models = {1: mm_glial}
 
         # Solve system

@@ -136,7 +136,6 @@ class Solver:
         self.F = Constant(params.F)                     # Faraday constant
         self.R = Constant(self.params.R)                # Gas constant
         self.temperature = Constant(params.temperature) # temperature
-        self.phi_M_init = params.phi_M_init             # initial membrane potential
         self.psi = self.F/(self.R*self.temperature)     # shorthand
 
         for idx, ion in enumerate(self.ion_list):
@@ -178,21 +177,36 @@ class Solver:
         # set initial conditions concentrations
         for idx, ion in enumerate(self.ion_list):
 
-            # interpolate initial conditions to global function and assign
-            c_init = self.make_global(ion['c_init_sub'])
+            # if initial conditions are constants
+            if ion['c_init_sub_type'] == 'constant':
+                # interpolate initial conditions to global function and assign
+                c_init = self.make_global(ion['c_init_sub'])
 
-            if idx == len(ion_list) - 1:
-                # set initial concentrations for eliminated ion
-                ion_list[-1]['c'] = interpolate(c_init, self.V_knp.sub(self.N_ions - 1).collapse())
+                if idx == len(ion_list) - 1:
+                    # set initial concentrations for eliminated ion
+                    ion_list[-1]['c'] = interpolate(c_init, self.V_knp.sub(self.N_ions - 1).collapse())
+                else:
+                    assign(self.c_prev_n.sub(idx), interpolate(c_init, self.V_knp.sub(idx).collapse()))
+                    assign(self.c_prev_k.sub(idx), interpolate(c_init, self.V_knp.sub(idx).collapse()))
+
+            # if initial conditions are functions
+            elif ion['c_init_sub_type'] == 'function':
+                if idx == len(ion_list) - 1:
+                    ion_list[-1]['c'] = interpolate(ion['c_init_sub'], self.V_knp.sub(self.N_ions - 1).collapse())
+                else:
+                    assign(self.c_prev_n.sub(idx), ion['c_init_sub'])
+                    assign(self.c_prev_k.sub(idx), ion['c_init_sub'])
+
             else:
-                assign(self.c_prev_n.sub(idx), interpolate(c_init, self.V_knp.sub(idx).collapse()))
-                assign(self.c_prev_k.sub(idx), interpolate(c_init, self.V_knp.sub(idx).collapse()))
+                print("Type of initial condition not recognized - please \
+                       spesify whether initial condition is constant or \
+                       function")
+                sys.exit(0)
 
         # define function space of piecewise constants on interface gamma for solution to ODEs
         self.Q = FunctionSpace(self.mesh, 'Discontinuous Lagrange Trace', 0)
 
         # set initial membrane potential
-        #self.phi_M_prev_PDE = pcws_constant_project(self.phi_M_init, self.Q)
         self.phi_M_prev_PDE = Function(self.Q)
 
         return
@@ -213,6 +227,7 @@ class Solver:
 
         # initialize and append ode models to list
         for tag, ode in odes.items():
+
             # Initialize ODE model
             ode_model = MembraneModel(ode, facet_f=self.surfaces, tag=tag, V=self.Q)
 
