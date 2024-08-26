@@ -30,7 +30,7 @@ if __name__ == "__main__":
 
     # Time variables PDEs
     dt = 0.1                       # global time step (ms)
-    Tstop = 10                     # global end time (ms)
+    Tstop = 2                      # global end time (ms)
     t = Constant(0.0)              # time constant
 
     # Time variables ODEs
@@ -114,8 +114,8 @@ if __name__ == "__main__":
     ion_list = [K, Cl, Na]
 
     # Membrane parameters
-    g_syn_bar = 5.0                  # synaptic conductivity (mS/cm**2)
-    #g_syn_bar = 0.0                   # synaptic conductivity (mS/cm**2)
+    #g_syn_bar = 5.0                  # synaptic conductivity (mS/cm**2)
+    g_syn_bar = 0.0                   # synaptic conductivity (mS/cm**2)
 
     # Set stimulus ODE
     stimulus = {'stim_amplitude': g_syn_bar}

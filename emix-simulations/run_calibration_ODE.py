@@ -2,9 +2,6 @@ import os
 import dolfin as df
 import numpy as np
 import matplotlib.pyplot as plt
-#import mm_hh_calibration_ODE as ode
-#import mm_glial_calibration_ODE as ode
-#import mm_leak_calibration_ODE as ode
 import mm_hh_glial_calibration_ODE as ode
 from knpemidg.membrane import MembraneModel
 from collections import namedtuple

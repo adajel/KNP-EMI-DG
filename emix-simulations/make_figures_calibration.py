@@ -308,14 +308,14 @@ def plot_3D_concentration_neuron(res, T, dt, fname):
     plt.title(r'Membrane potential ODE')
     plt.plot(phi_M_ODE, linewidth=3)
 
-    print("membrane potential", phi_M[-1])
-    print("membrane potential", phi_M_ODE[-1])
-    #print("Na_e", Na_e[-1])
-    #print("Na_i", Na_i[-1])
-    #print("K_i", K_i[-1])
-    #print("K_e", K_e[-1])
-    #print("Cl_i", Cl_i[-1])
-    #print("Cl_e", Cl_e[-1])
+    print("membrane potential", phi_M[0], phi_M[-1])
+    print("membrane potential", phi_M_ODE[0], phi_M_ODE[-1])
+    print("Na_e", Na_e[0], Na_e[-1])
+    print("Na_i", Na_i[0], Na_i[-1])
+    print("K_i", K_i[0], K_i[-1])
+    print("K_e", K_e[0], K_e[-1])
+    print("Cl_i", Cl_i[0], Cl_i[-1])
+    print("Cl_e", Cl_e[0], Cl_e[-1])
 
     # make pretty
     ax.axis('off')
@@ -406,14 +406,14 @@ def plot_3D_concentration_glial(res, T, dt, fname):
     plt.title(r'Membrane potential ODE')
     plt.plot(phi_M_ODE, linewidth=3)
 
-    print("membrane potential", phi_M[-1])
-    print("membrane potential", phi_M_ODE[-1])
-    #print("Na_e", Na_e[-1])
-    #print("Na_i", Na_i[-1])
-    #print("K_i", K_i[-1])
-    #print("K_e", K_e[-1])
-    #print("Cl_i", Cl_i[-1])
-    #print("Cl_e", Cl_e[-1])
+    print("membrane potential", phi_M[0], phi_M[-1])
+    print("membrane potential", phi_M_ODE[0] ,phi_M_ODE[-1])
+    print("Na_e", Na_e[0], Na_e[-1])
+    print("Na_i", Na_i[0], Na_i[-1])
+    print("K_i", K_i[0], K_i[-1])
+    print("K_e", K_e[0], K_e[-1])
+    print("Cl_i", Cl_i[0], Cl_i[-1])
+    print("Cl_e", Cl_e[0], Cl_e[-1])
 
     # make pretty
     ax.axis('off')
@@ -708,7 +708,7 @@ if not os.path.isdir('results/figures'):
 # create figures
 res_3D = '0' # mesh resolution for 3D axon bundle
 dt = 0.1
-T = 10
+T = 2
 
 #fname = 'results/data/calibration_two_tags/results.h5'
 fname = 'results/data/two_tags/results.h5'
@@ -716,7 +716,7 @@ fname = 'results/data/two_tags/results.h5'
 #plot_surface(fname, T, dt)
 plot_3D_concentration_neuron(res_3D, T, dt, fname)
 plot_3D_concentration_glial(res_3D, T, dt, fname)
-write_to_pvd(dt, T, fname)
+#write_to_pvd(dt, T, fname)
 
 #get_velocity(fname, T, dt)
 #plot_surface_time(fname, T, dt)
