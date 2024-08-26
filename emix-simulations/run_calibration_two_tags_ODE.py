@@ -2,7 +2,7 @@ import os
 import dolfin as df
 import numpy as np
 import matplotlib.pyplot as plt
-import mm_hh_glial_calibration_ODE as ode
+import mm_two_tags_calibration_ODE as ode
 from knpemidg.membrane import MembraneModel
 from collections import namedtuple
 
@@ -104,7 +104,7 @@ ax[2].set_title("K_e")
 ax[3].set_title("Na_e")
 #ax[4].set_title("Na_i")
 plt.tight_layout()
-fig.savefig("ode.png")
+fig.savefig("results/figures/ode.png")
 #plt.show()
 plt.close()
 
@@ -112,25 +112,25 @@ fig = plt.figure()
 plt.plot(potential_history_n[:, 2])
 #plt.ylim([-72, -70])
 plt.tight_layout()
-fig.savefig("phiM_n.png")
+fig.savefig("results/figures/phiM_n.png")
 
 fig = plt.figure()
 plt.plot(potential_history_g[:, 2])
 #plt.ylim([-72, -70])
 plt.tight_layout()
-fig.savefig("phiM_g.png")
+fig.savefig("results/figures/phiM_g.png")
 
 fig = plt.figure()
 plt.plot(K_e_history[:, 2])
 #plt.ylim([4, 4.1])
 plt.tight_layout()
-fig.savefig("K_e.png")
+fig.savefig("results/figures/K_e.png")
 
 fig = plt.figure()
 plt.plot(Na_e_history[:, 2])
 #plt.ylim([99, 100])
 plt.tight_layout()
-fig.savefig("Na_e.png")
+fig.savefig("results/figures/Na_e.png")
 
 # TODO:
 # - consider a test where we have dy/dt = A(x)y with y(t=0) = y0
