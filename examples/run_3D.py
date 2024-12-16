@@ -31,7 +31,8 @@ if __name__ == "__main__":
 
         # Time variables PDEs
         dt = 1.0e-4                      # global time step (s)
-        Tstop = 1.0e-1                   # global end time (s)
+        Tstop = 1.0e-1                  # global end time (s)
+
         t = Constant(0.0)                # time constant
 
         # Time variables ODEs
@@ -57,10 +58,13 @@ if __name__ == "__main__":
         Cl_e_init = Constant(104)        # extracellular CL concentration
         phi_M_init = Constant(-0.067738) # membrane potential (V)
 
+        phi_M_init_type = 'constant'     # type initial membrane potential
+
         # Set physical parameters
-        params = namedtuple('params', ('dt', 'n_steps_ODE', 'F', 'psi', \
-                    'phi_M_init', 'C_phi', 'C_M', 'R', 'temperature'))(dt, \
-                    n_steps_ODE, F, psi, phi_M_init, C_phi, C_M, R, temperature)
+        params = namedtuple('params', ('dt', 'n_steps_ODE', 'F', 'psi',
+                            'phi_M_init', 'phi_M_init_type', 'C_phi', 'C_M', 'R',
+                            'temperature'))(dt, n_steps_ODE, F, psi, phi_M_init,
+                            phi_M_init_type, C_phi, C_M, R, temperature)
 
         # diffusion coefficients for each sub-domain
         D_Na_sub = {1:D_Na, 0:D_Na}

@@ -8,11 +8,16 @@ def init_state_values(**values):
     Initialize state values
     """
     # Init values
-    n_init = 0.18820202480418377
-    m_init = 0.016648440745826054
-    h_init = 0.8542015627820454
+    #n_init = 0.18820202480418377
+    #m_init = 0.016648440745826054
+    #h_init = 0.8542015627820454
 
-    phi_M_init = -74.38609374461858
+    #phi_M_init = -74.38609374461858
+
+    m_init = 0.017989767797463828
+    n_init = 0.19552081174309086
+    h_init = 0.842624080578345
+    phi_M_init = -73.76927335477514
 
     init_values = np.array([m_init, h_init, n_init, phi_M_init], dtype=np.float_)
 
@@ -113,7 +118,7 @@ import numpy as np
 import timeit
 import math
 
-@cfunc(lsoda_sig, nopython=True) 
+@cfunc(lsoda_sig, nopython=True)
 def rhs_numba(t, states, values, parameters):
     """
     Compute the right hand side of the\
@@ -151,7 +156,7 @@ def rhs_numba(t, states, values, parameters):
     values[2] = (1 - states[2])*alpha_n - states[2]*beta_n
 
     # Expressions for the Membrane component
-    i_Stim = parameters[7] * np.exp(-np.mod(t, 20.0)/2.0)
+    i_Stim = parameters[7] * np.exp(-np.mod(t, 20.0)/2.0)#*(t < 45)
 
     i_pump = parameters[15] / ((1 + parameters[13] / parameters[11]) ** 2 \
            * (1 + parameters[14] / parameters[12]) ** 3)

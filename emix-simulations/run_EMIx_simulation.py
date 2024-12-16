@@ -103,7 +103,7 @@ if __name__ == "__main__":
 
     # Set stimulus ODE
     stimulus = {'stim_amplitude': g_syn_bar}
-    stimulus_locator = lambda x: (x[0] < 2.0e-6)
+    stimulus_locator = lambda x: (x[0] < 3.0e-4) # cm
 
     stim_params = namedtuple('membrane_params', ('g_syn_bar', \
                              'stimulus', 'stimulus_locator'))(g_syn_bar, \

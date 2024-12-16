@@ -107,6 +107,8 @@ class Solver:
 
         # DG penalty parameters
         self.gdim = self.mesh.geometry().dim()
+        #self.tau_emi = Constant(100*self.gdim*self.degree_emi)
+        #self.tau_knp = Constant(100*self.gdim*self.degree_knp)
         self.tau_emi = Constant(20*self.gdim*self.degree_emi)
         self.tau_knp = Constant(20*self.gdim*self.degree_knp)
 
@@ -137,6 +139,7 @@ class Solver:
         self.R = Constant(self.params.R)                # Gas constant
         self.temperature = Constant(params.temperature) # temperature
         self.psi = self.F/(self.R*self.temperature)     # shorthand
+        self.phi_M_init_type = params.phi_M_init_type   # initial membrane potential
 
         for idx, ion in enumerate(self.ion_list):
             # define global diffusion coefficients (for each ion)
@@ -188,7 +191,6 @@ class Solver:
                 else:
                     assign(self.c_prev_n.sub(idx), interpolate(c_init, self.V_knp.sub(idx).collapse()))
                     assign(self.c_prev_k.sub(idx), interpolate(c_init, self.V_knp.sub(idx).collapse()))
-
             # if initial conditions are functions
             elif ion['c_init_sub_type'] == 'function':
                 if idx == len(ion_list) - 1:
@@ -196,7 +198,6 @@ class Solver:
                 else:
                     assign(self.c_prev_n.sub(idx), ion['c_init_sub'])
                     assign(self.c_prev_k.sub(idx), ion['c_init_sub'])
-
             else:
                 print("Type of initial condition not recognized - please \
                        spesify whether initial condition is constant or \
@@ -206,8 +207,21 @@ class Solver:
         # define function space of piecewise constants on interface gamma for solution to ODEs
         self.Q = FunctionSpace(self.mesh, 'Discontinuous Lagrange Trace', 0)
 
-        # set initial membrane potential
-        self.phi_M_prev_PDE = Function(self.Q)
+        if self.phi_M_init_type == 'constant':
+            # set initial membrane potential with initial condition for phi_M
+            # given by constant
+            self.phi_M_prev_PDE = Function(self.Q)
+        elif self.phi_M_init_type == 'function':
+            # set initial membrane potential with initial condition for phi_M
+            # given by function (i.e. from a previous simulation)
+            self.phi_M_prev_PDE = self.params.phi_M_init
+        else:
+            print("Type of initial condition not recognized - please \
+                   spesify whether initial condition is constant or \
+                   function")
+            sys.exit(0)
+
+        #self.phi_M_prev_PDE = self.params.phi_M_init
 
         return
 
@@ -975,7 +989,7 @@ class Solver:
             # Save results
             if (k % self.sf) == 0 and filename is not None:
                 self.save_h5()      # fields
-                self.save_solver(k) # solver statistics
+                #self.save_solver(k/self.sf) # solver statistics
 
         # Close files
         if filename is not None:
@@ -990,6 +1004,14 @@ class Solver:
 
     def solve_system_active(self, Tstop, t, solver_params, filename=None):
         """ Solve system with active membrane mechanisms (ODEs) """
+
+        # TODO
+        #--------------------------------
+        #m = Function(self.Q)
+        #h = Function(self.Q)
+        #n = Function(self.Q)
+        #VM = Function(self.Q)
+        #--------------------------------
 
         # Setup solver and parameters
         self.solver_params = solver_params               # parameters for solvers
@@ -1044,9 +1066,18 @@ class Solver:
                 ode_model = mem_model['ode']
 
                 # Update membrane potential in ODE solver (based on previous
-                # PDEs step) - except for the first step where phi_M_prev
-                # should be the initial condition in the ODE system
-                if k > 0:
+                # PDEs step) - except for the first step in the case where
+                # phi_M_prev is given as constant when phi_M_init should
+                # be the initial condition in the ODE system
+
+                if (self.phi_M_init_type == 'constant') and (k == 0):
+                    # first time step and initial condition for phi_M given
+                    # as constant (do nothing, let phi_M_init be taken from ODE
+                    # file)
+                    pass
+                else:
+                    # update membrane potential in ODE solver (based on
+                    # previous PDEs step)
                     ode_model.set_membrane_potential(self.phi_M_prev_PDE)
 
                 # Update parameters in ODE solver (based on previous PDEs step)
@@ -1073,6 +1104,45 @@ class Solver:
                     # update src term for each ion species
                     ode_model.get_parameter("I_ch_" + ion, I_ch_k)
 
+                """
+                # TODO
+                # ---------------------------------------"
+                x = 8e-4
+                y = 0.2e-4
+                z = 0.5e-4
+                x_min = x - 0.5e-4; x_max = x + 0.1e-4
+                y_min = y - 0.5e-4; y_max = y + 0.1e-4
+                z_min = z; z_max = z + 0.04e-4
+
+                # define one facet to 10 for getting membrane potential
+                for facet in facets(self.mesh):
+                    x = [facet.midpoint().x(), facet.midpoint().y(), facet.midpoint().z()]
+                    point_1 = y_min <= x[1] <= y_max \
+                          and x_min <= x[0] <= x_max \
+                          and z_min <= x[2] <= z_max
+                    if point_1 and (self.surfaces[facet] == 1 or self.surfaces[facet] == 2):
+                        print(x[0], x[1], x[2])
+                        self.surfaces[facet] = 10
+
+                dS1 = Measure('dS', domain=self.mesh, subdomain_data=self.surfaces)
+
+                iface_size = assemble(Constant(1)*dS1(10))
+                if mem_model['ode'].tag == 1:
+                    print("tag", mem_model['ode'].tag)
+                    ode_model.get_state("m", m)
+                    ode_model.get_state("n", n)
+                    ode_model.get_state("h", h)
+                    ode_model.get_state("V", VM)
+                    print("--------------------------")
+                    print("GATING:")
+                    print("m", assemble(1.0/iface_size*avg(m)*dS1(10)))
+                    print("n", assemble(1.0/iface_size*avg(n)*dS1(10)))
+                    print("h", assemble(1.0/iface_size*avg(h)*dS1(10)))
+                    print("V", assemble(1.0/iface_size*avg(VM)*dS1(10)))
+                    print("--------------------------")
+                # ---------------------------------------"
+                """
+
             # End timer (ODE solve)
             te = time.perf_counter()
             res = te - ts
@@ -1084,8 +1154,8 @@ class Solver:
 
             # Save results
             if (k % self.sf) == 0 and filename is not None:
-                self.save_h5()      # fields
-                self.save_solver(k) # solver statistics
+                self.save_h5()              # fields
+                #self.save_solver(k/self.sf) # solver statistics
 
         # Close files
         if filename is not None:
@@ -1147,12 +1217,10 @@ class Solver:
         self.file_knp_assem.write("dofs: %d \n" % dofs_knp)
 
         # open files for saving bulk results
-        self.f_pot = File('results/active_knp/pot.pvd')
-        self.f_pot_grad = File('results/active_knp/pot_grad.pvd')
-        self.f_Na = File('results/active_knp/Na.pvd')
-        self.f_K = File('results/active_knp/K.pvd')
-        self.f_Cl = File('results/active_knp/Cl.pvd')
-        self.f_kappa = File('results/active_knp/Kappa.pvd')
+        #self.f_pot = XDMFFile(self.filename + 'pvd/pot.xdmf')
+        #self.f_Na = XDMFFile(self.filename + 'pvd/Na.xdmf')
+        #self.f_K = XDMFFile(self.filename + 'pvd/K.xdmf')
+        #self.f_Cl = XDMFFile(self.filename + 'pvd/Cl.xdmf')
 
         return
 
@@ -1168,12 +1236,10 @@ class Solver:
             Cl_ = project(self.c.split()[1], VDG0)
             Na_ = project(self.ion_list[-1]['c'], VDG0)
 
-            self.f_pot << (phi, k)
-            self.f_Na << (Na_, k)
-            self.f_K << (K_, k)
-            self.f_Cl << (Cl_, k)
-
-            self.f_kappa << (project(self.kappa, VDG0), k)
+            self.f_pot.write_checkpoint(phi_, "phi", time_step=k, append=True)
+            self.f_Na.write_checkpoint(Na_, "Na_", time_step=k, append=True)
+            self.f_K.write_checkpoint(K_, "K_", time_step=k, append=True)
+            self.f_Cl.write_checkpoint(Cl_, "Cl_", time_step=k, append=True)
 
             return
 
@@ -1188,6 +1254,11 @@ class Solver:
         self.file_knp_solve.close()
         self.file_emi_assem.close()
         self.file_knp_assem.close()
+
+        #self.f_pot.close()
+        #self.f_Na.close()
+        #self.f_K.close()
+        #self.f_Cl.close()
 
         return
 
@@ -1222,40 +1293,16 @@ class Solver:
 
     def make_global(self, f):
 
-        mesh = self.mesh
+        mesh = self.subdomains.mesh()
         subdomains = self.subdomains
 
         # DG space for projecting coefficients
-        Q = FunctionSpace(self.mesh, self.PK_knp)
+        Q = FunctionSpace(mesh, "DG", 0)
+        q = Function(Q, name="diff")
+        for key, value in f.items():
+            cell_indices = subdomains.where_equal(key)
+            q.vector()[cell_indices] = float(value)
 
-        dofmap = Q.dofmap()
+        q.vector().apply("insert")
 
-        # list of list of dofs for each sub-domain
-        o_dofss = {key: [] for key in f.keys()}
-
-        i = 0
-        # fill list with relevant dofs for each sub-domains
-        for cell in cells(mesh):
-            for tag, function in f.items():
-                if subdomains[cell] == tag:
-                    o_dofss[tag].extend(dofmap.cell_dofs(cell.index()))
-                    i += 1
-                    break
-
-        # check that all cells are matched with tags in loop above
-        assert sum(1 for _ in cells(mesh)) == i, \
-               "Dictionaries for DG data must match cell tags in mesh"
-
-        # set dofs list
-        for key, o_dofs in o_dofss.items():
-            o_dofs = list(set(o_dofs))
-
-        F = Function(Q)
-
-        for tag, function in f.items():
-            # interpolate data for sub-domain with tag tag
-            F_tag = interpolate(function, Q)
-            # copy to global function
-            F.vector()[o_dofss[tag]] = F_tag.vector()[o_dofss[tag]]
-
-        return F
+        return q

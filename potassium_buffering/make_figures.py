@@ -28,7 +28,7 @@ mpl.rcParams['image.cmap'] = 'jet'
 
 path = 'results/data/'
 
-def write_to_pvd(dt, T, fname):
+def write_to_pvd(fname, fnameout, T, dt):
     # read data file
     hdf5file = HDF5File(MPI.comm_world, fname, "r")
 
@@ -36,7 +36,7 @@ def write_to_pvd(dt, T, fname):
     subdomains = MeshFunction("size_t", mesh, 2)
     surfaces = MeshFunction("size_t", mesh, 1)
     hdf5file.read(mesh, '/mesh', False)
-    #mesh.coordinates()[:] *= 1e-7
+    mesh.coordinates()[:] *= 1e7 # convert from cm to nm
     hdf5file.read(subdomains, '/subdomains')
     hdf5file.read(surfaces, '/surfaces')
 
@@ -53,10 +53,10 @@ def write_to_pvd(dt, T, fname):
     Cl = Function(V)
     phi = Function(V)
 
-    f_phi = File('results/pvd/pot.pvd')
-    f_K = File('results/pvd/K.pvd')
-    f_Na = File('results/pvd/Na.pvd')
-    f_Cl = File('results/pvd/Cl.pvd')
+    f_phi = File(fnameout + 'pvd/pot.pvd')
+    f_K = File(fnameout + 'pvd/K.pvd')
+    f_Na = File(fnameout + 'pvd/Na.pvd')
+    f_Cl = File(fnameout + 'pvd/Cl.pvd')
 
     for n in range(1, int(T/dt)):
 
@@ -78,10 +78,10 @@ def write_to_pvd(dt, T, fname):
         hdf5file.read(w, "/potential/vector_" + str(n))
         assign(phi, w)
 
-        f_Na << Na, n
-        f_K << K, n
-        f_Cl << Cl, n
-        f_phi << phi, n
+        f_Na << (Na, n)
+        f_K << (K, n)
+        f_Cl << (Cl, n)
+        f_phi << (phi, n)
 
     return
 
@@ -437,7 +437,7 @@ def plot_3D_concentration_glial(res, T, dt, fname):
     return
 
 
-def plot_surface(fname, T, dt):
+def plot_surface(fname, fnameout, T, dt):
 
     # read data file
     hdf5file = HDF5File(MPI.comm_world, fname, "r")
@@ -453,7 +453,8 @@ def plot_surface(fname, T, dt):
     ds = Measure('ds', domain=mesh, subdomain_data=surfaces)
     dS = Measure('dS', domain=mesh, subdomain_data=surfaces)
 
-    surface_tags = (2,)
+    #surface_tags = (2,)
+    surface_tags = (1, 3)
 
     surface_mesh, L, cell2Ldofs = P0surf_to_DLT0_map(surfaces, tags=surface_tags)
 
@@ -509,7 +510,7 @@ def plot_surface(fname, T, dt):
     values = vh.vector().get_local()[cell2Ldofs]
     cell_data = {'uh': values}
 
-    dlt = DltWriter('testing/bar', mesh, surface_mesh)
+    dlt = DltWriter(fnameout + 'pvd/bar', mesh, surface_mesh)
     with dlt as output:
         output.write(cell_data, t=0)
 
@@ -715,16 +716,21 @@ if not os.path.isdir('results/figures'):
 # create figures
 res_3D = '0' # mesh resolution for 3D axon bundle
 dt = 0.1
-T = 1
+T = 0.2
 
-fname = 'results/data/EMIx-synapse_5/results.h5'
-#fname = 'results/data/EMIx/results.h5'
+#fname = 'results/data/EMIx-synapse_10/results.h5'
 
-#plot_surface(fname, T, dt)
+#fname = 'results/data/EMIx-synapse_10/results.h5'
+#fnameout = 'results/data/EMIx-synapse_10/'
+
+fname = 'results/data/EMIx-synapse_5-test/results.h5'
+fnameout = 'results/data/EMIx-synapse_5-test/'
+
+write_to_pvd(fname, fnameout, T, dt)
+plot_surface(fname, fnameout, T, dt)
 
 #plot_3D_concentration_neuron(res_3D, T, dt, fname)
 #plot_3D_concentration_glial(res_3D, T, dt, fname)
-write_to_pvd(dt, T, fname)
 
 #get_velocity(fname, T, dt)
 #plot_surface_time(fname, T, dt)

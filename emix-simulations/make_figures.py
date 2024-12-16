@@ -324,7 +324,7 @@ def plot_3D_concentration_neuron(res, T, dt, fname):
     plt.tight_layout()
 
     # save figure to file
-    plt.savefig('results/figures/callibrate_cell_1.svg', format='svg')
+    plt.savefig('results/figures/emix_cell_1.svg', format='svg')
 
     f_phi_M = open('phi_M_3D.txt', "w")
     for p in phi_M:
@@ -332,6 +332,7 @@ def plot_3D_concentration_neuron(res, T, dt, fname):
     f_phi_M.close()
 
     return
+
 
 def plot_3D_concentration_glial(res, T, dt, fname):
 
@@ -424,7 +425,7 @@ def plot_3D_concentration_glial(res, T, dt, fname):
     plt.tight_layout()
 
     # save figure to file
-    plt.savefig('results/figures/callibrate_cell_2.svg', format='svg')
+    plt.savefig('results/figures/emix_cell_2.svg', format='svg')
 
     f_phi_M = open('phi_M_3D.txt', "w")
     for p in phi_M:
@@ -712,14 +713,14 @@ if not os.path.isdir('results/figures'):
 # create figures
 res_3D = '0' # mesh resolution for 3D axon bundle
 dt = 0.1
-T = 2
+T = 50
 
 fname = 'results/data/EMIx/results.h5'
 
-#plot_surface(fname, T, dt)
-plot_3D_concentration_neuron(res_3D, T, dt, fname)
-plot_3D_concentration_glial(res_3D, T, dt, fname)
-#write_to_pvd(dt, T, fname)
+plot_surface(fname, T, dt)
+#plot_3D_concentration_neuron(res_3D, T, dt, fname)
+#plot_3D_concentration_glial(res_3D, T, dt, fname)
+write_to_pvd(dt, T, fname)
 
 #get_velocity(fname, T, dt)
 #plot_surface_time(fname, T, dt)

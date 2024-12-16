@@ -714,9 +714,9 @@ T = 2
 fname = 'results/data/two_tags/results.h5'
 
 #plot_surface(fname, T, dt)
-plot_3D_concentration_neuron(res_3D, T, dt, fname)
-plot_3D_concentration_glial(res_3D, T, dt, fname)
-#write_to_pvd(dt, T, fname)
+#plot_3D_concentration_neuron(res_3D, T, dt, fname)
+#plot_3D_concentration_glial(res_3D, T, dt, fname)
+write_to_pvd(dt, T, fname)
 
 #get_velocity(fname, T, dt)
 #plot_surface_time(fname, T, dt)

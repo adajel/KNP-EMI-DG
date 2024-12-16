@@ -55,7 +55,7 @@ if __name__ == "__main__":
 
     # Time variables (PDEs)
     dt = 0.1                         # global time step (ms)
-    Tstop = 10                       # global end time (ms)
+    Tstop = 0.3                      # global end time (ms)
     t = Constant(0.0)                # time constant
 
     # Time variables (ODEs)
@@ -125,13 +125,11 @@ if __name__ == "__main__":
     ion_list = [K, Cl, Na]
 
     # Membrane parameters
-    g_syn_bar = 10   # synaptic conductivity (mS/cm**2)
+    g_syn_bar = 5   # synaptic conductivity (mS/cm**2)
 
     # Set stimulus ODE
     stimulus = {'stim_amplitude': g_syn_bar}
     stimulus_locator = lambda x: True
-    # TODO
-    #stimulus_locator = lambda x: (x[0] < 2000e-7) # cm
 
     stim_params = namedtuple('membrane_params', ('g_syn_bar', \
                              'stimulus', 'stimulus_locator'))(g_syn_bar, \
@@ -140,7 +138,17 @@ if __name__ == "__main__":
     # Get mesh, subdomains, surfaces paths
     mesh_path = 'meshes/synapse/size+5000/dx+20_ncells+5/envelopsize+18/'
     # File for results
-    fname = "results/data/EMIx-synapse_5/"
+    fname = "results/data/EMIx-synapse_5-test/"
+
+    # Get mesh, subdomains, surfaces paths
+    #mesh_path = 'meshes/synapse/size+5000/dx+20_ncells+10/envelopsize+18/'
+    # File for results
+    #fname = "results/data/EMIx-synapse_10/"
+
+    # Get mesh, subdomains, surfaces paths
+    #mesh_path = 'meshes/synapse/size+5000/dx+20_ncells+50/envelopsize+18/'
+    # File for results
+    #fname = "results/data/EMIx-synapse_50/"
 
     mesh = Mesh()
     infile = XDMFFile(mesh_path + 'mesh.xdmf')
@@ -161,13 +169,13 @@ if __name__ == "__main__":
     direct_emi = False
     rtol_emi = 1E-5
     atol_emi = 1E-40
-    threshold_emi = None
+    threshold_emi = 0.9
 
     # Set solver parameters KNP (True is direct, and False is iterate)
     direct_knp = False
     rtol_knp = 1E-7
     atol_knp = 1E-40
-    threshold_knp = None
+    threshold_knp = 0.75
 
     # Set parameters
     solver_params = namedtuple('solver_params', ('direct_emi',
@@ -181,11 +189,9 @@ if __name__ == "__main__":
 
     # Dictionary with membrane models (key is facet tag, value is ode model)
     ode_models = {1: mm_hh, 2: mm_glial, 3: mm_hh_syn}
-    # TODO
-    #ode_models = {1: mm_hh_syn, 2: mm_glial, 3: mm_hh_syn}
 
     # Solve system
-    S = Solver(params, ion_list)                    # create solver
+    S = Solver(params, ion_list, sf=1)              # create solver
     S.setup_domain(mesh, subdomains, surfaces)      # setup meshes
     S.setup_parameters()                            # setup physical parameters
     S.setup_FEM_spaces()                            # setup function spaces and numerical parameters

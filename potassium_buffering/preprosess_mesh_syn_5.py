@@ -44,7 +44,7 @@ if __name__ == "__main__":
     # Set stimulus ODE
     box_width = 5000e-7 # convert from nm to cm
 
-    stim_box_width = 400 # nm
+    stim_box_width = 200 # nm
     synapse_grid = ""
 
     fname = 'synapse_location_data_5.yml'
@@ -123,16 +123,16 @@ if __name__ == "__main__":
         # keep facet marking for interior facets
         elif surfaces[facet] == 0:
             surfaces[facet] = 0
-        # mark neuron facets
+        # mark glial facets
         elif surfaces[facet] == 5:
             surfaces[facet] = 2
-        # mark glial facets
+        # mark neuron facets
         else:
             surfaces[facet] = 1
 
     print(np.unique(surfaces.array()))
 
-    # remark synapse (NB! DEBUG ONLY)
+    # remark synapses
     # -------------------------------------------
     for facet in facets(mesh):
         x = [facet.midpoint().x(), facet.midpoint().y(), facet.midpoint().z()]

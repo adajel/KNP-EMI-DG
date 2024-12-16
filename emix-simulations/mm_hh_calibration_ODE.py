@@ -9,10 +9,6 @@ def init_state_values(**values):
     """
 
     # Init values
-    #n_init = 0.2276174382146544          # gating variable n
-    #m_init = 0.02472911223827967        # gating variable m
-    #h_init = 0.7867106718874558         # gating variable h
-
     n_init = 0.19059822295360918
     m_init = 0.01708076504334425
     h_init = 0.8504559822908828
@@ -183,7 +179,7 @@ def rhs_numba(t, states, values, parameters):
     values[2] = (1 - states[2])*alpha_n - states[2]*beta_n
 
     # Expressions for the Membrane component
-    i_Stim = parameters[7] * np.exp(-np.mod(t, 20.0)/2.0)
+    i_Stim = parameters[7] * np.exp(-np.mod(t, 20.0)/2.0)*(t < 200)
 
     i_pump = parameters[15] / ((1 + parameters[13] / K_e) ** 2 \
            * (1 + parameters[14] / Na_i) ** 3)

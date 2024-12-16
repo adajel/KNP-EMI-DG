@@ -39,9 +39,9 @@ def init_parameter_values(**values):
     g_leak_Na = 0.1         # Na leak conductivity (mS/cm**2)
     g_leak_K  = 0.4         # K leak conductivity (mS/cm**2)
 
-    m_K = 2                # threshold ECS K (mol/m^3)
-    m_Na = 7.7             # threshold ICS Na (mol/m^3)
-    I_max = 44.9             # max pump strength (muA/cm^2)
+    m_K = 2                 # threshold ECS K (mol/m^3)
+    m_Na = 7.7              # threshold ICS Na (mol/m^3)
+    I_max = 44.9            # max pump strength (muA/cm^2)
 
     # Set initial parameter values
     init_values = np.array([g_Na_bar, g_K_bar, \
