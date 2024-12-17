@@ -434,6 +434,9 @@ class Solver:
             opts.setValue('ksp_view', None)
             opts.setValue('pc_type', 'hypre')
 
+            opts.setValue('ksp_converged_reason', None)
+            opts.setValue('ksp_monitor', None)
+
             # set tolerances
             opts.setValue('ksp_rtol', self.rtol_emi)
             opts.setValue('ksp_atol', self.atol_emi)
@@ -691,6 +694,9 @@ class Solver:
             opts.setValue("ksp_initial_guess_nonzero", 1)
             opts.setValue("ksp_view", None)
             opts.setValue("ksp_monitor_true_residual", None)
+
+            opts.setValue('ksp_converged_reason', None)
+            opts.setValue('ksp_monitor', None)
 
             opts.setValue('ksp_rtol', self.rtol_knp)
             opts.setValue('ksp_atol', self.atol_knp)
