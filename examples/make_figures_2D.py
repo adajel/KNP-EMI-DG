@@ -25,7 +25,7 @@ mpl.rcParams['image.cmap'] = 'jet'
 
 path = 'results/data/'
 
-def get_time_series(dt, T, fname, x, y):
+def get_time_series(dt, T, fname, x_e, y_e, x_i, y_i):
     # read data file
     hdf5file = HDF5File(MPI.comm_world, fname, "r")
 
@@ -50,35 +50,45 @@ def get_time_series(dt, T, fname, x, y):
     f_Cl = Function(V)
     f_phi = Function(V)
 
-    Na = []
-    K = []
-    Cl = []
-    phi = []
+    Na_e = []
+    K_e = []
+    Cl_e = []
+    phi_e = []
+
+    Na_i = []
+    K_i = []
+    Cl_i = []
+    phi_i = []
 
     for n in range(1, int(T/dt)):
+            print(n)
 
             # read file
             hdf5file.read(u, "/concentrations/vector_" + str(n))
 
             # K concentrations
             assign(f_K, u.sub(0))
-            K.append(f_K(x, y))
+            K_e.append(f_K(x_e, y_e))
+            K_i.append(f_K(x_i, y_i))
 
             # Cl concentrations
             assign(f_Cl, u.sub(1))
-            Cl.append(f_Cl(x, y))
+            Cl_e.append(f_Cl(x_e, y_e))
+            Cl_i.append(f_Cl(x_i, y_i))
 
             # Na concentrations
             hdf5file.read(v, "/elim_concentration/vector_" + str(n))
             assign(f_Na, v)
-            Na.append(f_Na(x, y))
+            Na_e.append(f_Na(x_e, y_e))
+            Na_i.append(f_Na(x_i, y_i))
 
             # potential
             hdf5file.read(w, "/potential/vector_" + str(n))
             assign(f_phi, w)
-            phi.append(1.0e3*f_phi(x, y))
+            phi_e.append(1.0e3*f_phi(x_e, y_e))
+            phi_i.append(1.0e3*f_phi(x_i, y_i))
 
-    return Na, K, Cl, phi
+    return Na_e, K_e, Cl_e, phi_e, Na_i, K_i, Cl_i, phi_i
 
 def get_time_series_membrane(dt, T, fname, x_, y_):
     # read data file
@@ -92,21 +102,20 @@ def get_time_series_membrane(dt, T, fname, x_, y_):
     hdf5file.read(subdomains, '/subdomains')
     hdf5file.read(surfaces, '/surfaces')
 
-    x_min = 24.15
-    x_max = 24.2
-    y_min = 0.9
-    y_max = 1.1
+    x_min = x_ - 0.5
+    x_max = x_ + 0.5
+    y_min = y_ - 0.5
+    y_max = y_ + 0.5
 
     # define one facet to 10 for getting membrane potential
     for facet in facets(mesh):
         x = [facet.midpoint().x(), facet.midpoint().y(), facet.midpoint().z()]
         point_1 = (y_min <= x[1] <= y_max and x_min <= x[0] <= x_max)
+
         if point_1 and surfaces[facet] == 1:
             print(x[0], x[1])
             surfaces[facet] = 10
-
-    surfacesfile = File('surfaces_plot.pvd')
-    surfacesfile << surfaces
+            break
 
     # define function space of piecewise constants on interface gamma for solution to ODEs
     Q = FunctionSpace(mesh, 'Discontinuous Lagrange Trace', 0)
@@ -138,6 +147,7 @@ def get_time_series_membrane(dt, T, fname, x_, y_):
     z_Na = 1; z_K = 1; temperature = 300; F = 96485; R = 8.314
 
     for n in range(1, int(T/dt)):
+            print(n)
 
             # potential
             hdf5file.read(w_phi, "/potential/vector_" + str(n))
@@ -166,87 +176,8 @@ def get_time_series_membrane(dt, T, fname, x_, y_):
 
     return phi_M_s, E_Na_s, E_K_s
 
-def get_time_series_gating(dt, T, fname, x_, y_):
-    # read data file
-    hdf5file = HDF5File(MPI.comm_world, fname, "r")
 
-    x_min = x_; x_max = x_ + 0.08
-    y_min = y_ - 0.01; y_max = y_
-
-    mesh = Mesh()
-    subdomains = MeshFunction("size_t", mesh, 2)
-    surfaces = MeshFunction("size_t", mesh, 1)
-    hdf5file.read(mesh, '/mesh', False)
-    mesh.coordinates()[:] *= 1e6
-    hdf5file.read(subdomains, '/subdomains')
-    hdf5file.read(surfaces, '/surfaces')
-
-    # define one facet to 10 for getting membrane potential
-    for facet in facets(mesh):
-        x = [facet.midpoint().x(), facet.midpoint().y(), facet.midpoint().z()]
-        point_1 = (y_min <= x[1] <= y_max and x_min <= x[0] <= x_max)
-        if point_1:
-            print(x[0], x[1])
-            surfaces[facet] = 10
-
-    surfacesfile = File('surfaces_plot.pvd')
-    surfacesfile << surfaces
-
-    # define function space of piecewise constants on interface gamma for solution to ODEs
-    Q = FunctionSpace(mesh, 'Discontinuous Lagrange Trace', 0)
-
-    v_n_HH = Function(Q)
-    v_m_HH = Function(Q)
-    v_h_HH = Function(Q)
-
-    f_n_HH = Function(Q)
-    f_m_HH = Function(Q)
-    f_h_HH = Function(Q)
-
-    # interface normal
-    n_g = interface_normal(subdomains, mesh)
-
-    dS = Measure('dS', domain=mesh, subdomain_data=surfaces)
-    iface_size = assemble(Constant(1)*dS(10))
-
-    P1 = FiniteElement('DG', mesh.ufl_cell(), 1)
-    V = FunctionSpace(mesh, P1)
-
-    n_HH_s = []
-    m_HH_s = []
-    h_HH_s = []
-
-    for n in range(1, int(T/dt)):
-
-            # gating
-            hdf5file.read(v_n_HH, "/n_HH/vector_" + str(n))
-            assign(f_n_HH, v_n_HH)
-
-            hdf5file.read(v_m_HH, "/m_HH/vector_" + str(n))
-            assign(f_m_HH, v_m_HH)
-
-            hdf5file.read(v_h_HH, "/h_HH/vector_" + str(n))
-            assign(f_h_HH, v_h_HH)
-
-            # n
-            n_HH_ = assemble(1.0/iface_size*avg(f_n_HH)*dS(10))
-            n_HH_s.append(n_HH_)
-
-            # m
-            m_HH_ = assemble(1.0/iface_size*avg(f_m_HH)*dS(10))
-            m_HH_s.append(m_HH_)
-
-            # h
-            h_HH_ = assemble(1.0/iface_size*avg(f_h_HH)*dS(10))
-            h_HH_s.append(h_HH_)
-
-    return n_HH_s, m_HH_s, h_HH_s
-
-
-def plot_2D_concentration(res):
-
-    dt = 1.0e-4
-    T = 1.0e-1
+def plot_2D_concentration(dt, T):
 
     temperature = 300 # temperature (K)
     F = 96485         # Faraday's constant (C/mol)
@@ -269,8 +200,8 @@ def plot_2D_concentration(res):
     phi_M, E_Na, E_K = get_time_series_membrane(dt, T, fname, x_M_A, y_M_A)
 
     # bulk concentrations
-    Na_e, K_e, Cl_e, _ = get_time_series(dt, T, fname, x_e_A, y_e_A)
-    Na_i, K_i, Cl_i, _ = get_time_series(dt, T, fname, x_i_A, y_i_A)
+    Na_e, K_e, Cl_e, _, Na_i, K_i, Cl_i, _ = get_time_series(dt, T, fname, \
+            x_e_A, y_e_A, x_i_A, y_i_A)
 
     #################################################################
     # get data axons BC are stimulated
@@ -334,8 +265,38 @@ def plot_2D_concentration(res):
 
     f_phi_M = open('results/data/2D/solver/phi_M_2D.txt', "w")
     for p in phi_M:
-        f_phi_M.write("%.10f \n" % p*1000)
+        f_phi_M.write("%.10f \n" % p)
     f_phi_M.close()
+
+    f_K_e = open('results/data/2D/solver/K_ECS_2D.txt', "w")
+    for p in K_e:
+        f_K_e.write("%.10f \n" % p)
+    f_K_e.close()
+
+    f_K_i = open('results/data/2D/solver/K_ICS_2D.txt', "w")
+    for p in K_i:
+        f_K_i.write("%.10f \n" % p)
+    f_K_i.close()
+
+    f_Na_e = open('results/data/2D/solver/Na_ECS_2D.txt', "w")
+    for p in Na_e:
+        f_Na_e.write("%.10f \n" % p)
+    f_Na_e.close()
+
+    f_Na_i = open('results/data/2D/solver/Na_ICS_2D.txt', "w")
+    for p in Na_i:
+        f_Na_i.write("%.10f \n" % p)
+    f_Na_i.close()
+
+    f_E_Na = open('results/data/2D/solver/E_Na_2D.txt', "w")
+    for p in E_Na:
+        f_E_Na.write("%.10f \n" % p)
+    f_E_Na.close()
+
+    f_E_K = open('results/data/2D/solver/E_K_2D.txt', "w")
+    for p in E_K:
+        f_E_K.write("%.10f \n" % p)
+    f_E_K.close()
 
     return
 
@@ -344,5 +305,7 @@ if not os.path.isdir('results/figures'):
     os.mkdir('results/figures')
 
 # create figures
-res_2D = '2'
-plot_2D_concentration(res_2D)
+dt = 1.0e-4
+T = 3.0e-1
+
+plot_2D_concentration(dt, T)

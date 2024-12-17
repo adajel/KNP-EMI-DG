@@ -65,7 +65,7 @@ def main(argv=None):
         "--directory",
         dest="mesh_dir",
         type=Path,
-        default=Path("meshes/MMS"),
+        default=Path("meshes/2D"),
         help="Directory to save the mesh",
     )
     args = parser.parse_args(argv)

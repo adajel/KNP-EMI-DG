@@ -8,7 +8,8 @@ def init_state_values(**values):
     Initialize state values
     """
     # Init values
-    phi_M_init = -0.0677379636231   # membrane potential (V)
+    #phi_M_init = -0.0677379636231   # membrane potential (V)
+    phi_M_init = -0.07438609374462003   # membrane potential (V)
 
     init_values = np.array([phi_M_init], dtype=np.float_)
 
@@ -33,20 +34,27 @@ def init_parameter_values(**values):
     # Membrane parameters
     g_leak_Na = 2.0*0.5   # Na leak conductivity (S/m**2)
     g_leak_K  = 8.0*0.5   # K leak conductivity (S/m**2)
+
+    m_K = 2                 # threshold ECS K (mol/m**3)
+    m_Na = 7.7              # threshold ICS Na (mol/m**3)
+    I_max = 0.449           # max pump strength (A/m**2)
+
     # TODO
     #g_leak_Na = 0.0   # Na leak conductivity (S/m**2)
     #g_leak_K  = 0.0   # K leak conductivity (S/m**2)
 
     # Set initial parameter values
     init_values = np.array([g_leak_Na, g_leak_K, \
-                            0, 0, 0, 0, 0, 0, 0, 0, 0], dtype=np.float_)
+                            0, 0, 0, 0, 0, 0, 0, 0, 0,
+                            m_K, m_Na, I_max], dtype=np.float_)
 
     # Parameter indices and limit checker
     param_ind = dict([("g_leak_Na", 0), ("g_leak_K", 1),
                       ("E_Na", 2), ("E_K", 3),
                       ("Cm", 4), ("stim_amplitude", 5),
                       ("I_ch_Na", 6), ("I_ch_K", 7), ("I_ch_Cl", 8),
-                      ("K_e", 9), ("Na_i", 10)])
+                      ("K_e", 9), ("Na_i", 10),
+                      ("m_K", 11), ("m_Na", 12), ("I_max", 13)])
 
     for param_name, value in values.items():
         if param_name not in param_ind:
@@ -82,7 +90,8 @@ def parameter_indices(*params):
                        ("E_Na", 2), ("E_K", 3), \
                        ("Cm", 4), ("stim_amplitude", 5), \
                        ("I_ch_Na", 6), ("I_ch_K", 7), ("I_ch_Cl", 8),
-                       ("K_e", 9), ("Na_i", 10)])
+                       ("K_e", 9), ("Na_i", 10),
+                       ("m_K", 11), ("m_Na", 12), ("I_max", 13)])
 
     indices = []
     for param in params:
@@ -120,13 +129,16 @@ def rhs_numba(t, states, values, parameters):
          #assert isinstance(values, np.ndarray) and values.shape == (4,)
 
     # Expressions for stimuli
-    i_Stim = parameters[5] * np.exp(-np.mod(t, 0.02)/0.002)
+    i_Stim = parameters[5] * np.exp(-np.mod(t, 0.03)/0.002)
+
+    i_pump = parameters[13] / ((1 + parameters[11] / parameters[9]) ** 2 \
+           * (1 + parameters[12] / parameters[10]) ** 3)
 
     # Expressions for the Sodium channel component
-    i_Na = (parameters[0] + i_Stim) * (states[0] - parameters[2])
+    i_Na = (parameters[0] + i_Stim) * (states[0] - parameters[2]) + 3 * i_pump
 
     # Expressions for the Potassium channel component
-    i_K = parameters[1] * (states[0] - parameters[3])
+    i_K = parameters[1] * (states[0] - parameters[3]) - 2 * i_pump
 
     # set I_ch_Na
     parameters[6] = i_Na

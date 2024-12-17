@@ -12,7 +12,7 @@ class Boundary(SubDomain):
     def inside(self, x, on_boundary):
         return on_boundary
 
-def add_axon(mesh, subdomains, surfaces, a, b):
+def add_axon(mesh, subdomains, surfaces, a, b, tag_bndr):
     # define interior domain
     in_interior = """ (x[0] >= %g && x[0] <= %g &&
                        x[1] >= %g && x[1] <= %g &&
@@ -42,7 +42,9 @@ def add_axon(mesh, subdomains, surfaces, a, b):
         side_4 = near(x[1], b[1]) and a[0] <= x[0] <= b[0] and a[2] <= x[2] <= b[2]
         side_5 = near(x[2], a[2]) and a[0] <= x[0] <= b[0] and a[1] <= x[1] <= b[1]
         side_6 = near(x[2], b[2]) and a[0] <= x[0] <= b[0] and a[1] <= x[1] <= b[1]
-        surfaces[facet] += side_1 or side_2 or side_3 or side_4 or side_5 or side_6
+        #surfaces[facet] += side_1 or side_2 or side_3 or side_4 or side_5 or side_6
+        if (side_1 or side_2 or side_3 or side_4 or side_5 or side_6):
+            surfaces[facet] = tag_bndr
 
     return
 
@@ -69,7 +71,7 @@ def main(argv=None):
         "--directory",
         dest="mesh_dir",
         type=Path,
-        default=Path("meshes/MMS"),
+        default=Path("meshes/3D"),
         help="Directory to save the mesh",
     )
     args = parser.parse_args(argv)
@@ -88,19 +90,19 @@ def main(argv=None):
 
     a = Point(5, 0.2, 0.2)
     b = Point(l * 16 - 5, 0.4, 0.4)
-    add_axon(mesh, subdomains, surfaces, a, b)
+    add_axon(mesh, subdomains, surfaces, a, b, 1)
 
     a = Point(5, 0.5, 0.5)
     b = Point(l * 16 - 5, 0.7, 0.7)
-    add_axon(mesh, subdomains, surfaces, a, b)
+    add_axon(mesh, subdomains, surfaces, a, b, 2)
 
     a = Point(5, 0.5, 0.2)
     b = Point(l * 16 - 5, 0.7, 0.4)
-    add_axon(mesh, subdomains, surfaces, a, b)
+    add_axon(mesh, subdomains, surfaces, a, b, 2)
 
     a = Point(5, 0.2, 0.5)
     b = Point(l * 16 - 5, 0.4, 0.7)
-    add_axon(mesh, subdomains, surfaces, a, b)
+    add_axon(mesh, subdomains, surfaces, a, b, 2)
 
     # mark exterior boundary
     Boundary().mark(surfaces, 5)
@@ -119,5 +121,18 @@ def main(argv=None):
 
     surfaces_file = File(
         str((out_dir / f"surfaces_{resolution_factor}.xml").absolute())
+    )
+    surfaces_file << surfaces
+
+    mesh_file = File(str((out_dir / f"mesh_{resolution_factor}.pvd").absolute()))
+    mesh_file << mesh
+
+    subdomains_file = File(
+        str((out_dir / f"subdomains_{resolution_factor}.pvd").absolute())
+    )
+    subdomains_file << subdomains
+
+    surfaces_file = File(
+        str((out_dir / f"surfaces_{resolution_factor}.pvd").absolute())
     )
     surfaces_file << surfaces

@@ -167,84 +167,6 @@ def get_time_series_membrane(dt, T, fname, x_, y_, z_):
 
     return phi_M_s, E_Na_s, E_K_s
 
-def get_time_series_gating(dt, T, fname, x_, y_, z_):
-    # read data file
-    hdf5file = HDF5File(MPI.comm_world, fname, "r")
-
-    mesh = Mesh()
-    subdomains = MeshFunction("size_t", mesh, 2)
-    surfaces = MeshFunction("size_t", mesh, 1)
-    hdf5file.read(mesh, '/mesh', False)
-    mesh.coordinates()[:] *= 1e6
-    hdf5file.read(subdomains, '/subdomains')
-    hdf5file.read(surfaces, '/surfaces')
-
-    x_min = x_; x_max = x_ + 0.5
-    y_min = y_ - 0.01; y_max = y_
-    z_min = z_ - 0.01; z_max = z_
-
-    # define one facet to 10 for getting membrane potential
-    for facet in facets(mesh):
-        x = [facet.midpoint().x(), facet.midpoint().y(), facet.midpoint().z()]
-        point_1 = (y_min <= x[1] <= y_max and x_min <= x[0] <= x_max and z_min <= x[2] <= z_max)
-        if point_1:
-            print(x[0], x[1], x[2])
-            surfaces[facet] = 10
-
-    surfacesfile = File('surfaces_plot.pvd')
-    surfacesfile << surfaces
-
-    # define function space of piecewise constants on interface gamma for solution to ODEs
-    Q = FunctionSpace(mesh, 'Discontinuous Lagrange Trace', 0)
-
-    v_n_HH = Function(Q)
-    v_m_HH = Function(Q)
-    v_h_HH = Function(Q)
-
-    f_n_HH = Function(Q)
-    f_m_HH = Function(Q)
-    f_h_HH = Function(Q)
-
-    # interface normal
-    n_g = interface_normal(subdomains, mesh)
-
-    dS = Measure('dS', domain=mesh, subdomain_data=surfaces)
-    iface_size = assemble(Constant(1)*dS(10))
-
-    P1 = FiniteElement('DG', mesh.ufl_cell(), 1)
-    V = FunctionSpace(mesh, P1)
-
-    n_HH_s = []
-    m_HH_s = []
-    h_HH_s = []
-
-    for n in range(1, int(T/dt)):
-
-            # gating
-            hdf5file.read(v_n_HH, "/n_HH/vector_" + str(n))
-            assign(f_n_HH, v_n_HH)
-
-            hdf5file.read(v_m_HH, "/m_HH/vector_" + str(n))
-            assign(f_m_HH, v_m_HH)
-
-            hdf5file.read(v_h_HH, "/h_HH/vector_" + str(n))
-            assign(f_h_HH, v_h_HH)
-
-            # n
-            n_HH_ = assemble(1.0/iface_size*avg(f_n_HH)*dS(10))
-            n_HH_s.append(n_HH_)
-
-            # m
-            m_HH_ = assemble(1.0/iface_size*avg(f_m_HH)*dS(10))
-            m_HH_s.append(m_HH_)
-
-            # h
-            h_HH_ = assemble(1.0/iface_size*avg(f_h_HH)*dS(10))
-            h_HH_s.append(h_HH_)
-
-    return n_HH_s, m_HH_s, h_HH_s
-
-
 def plot_3D_concentration(res, T, dt):
 
     temperature = 300 # temperature (K)
@@ -254,12 +176,11 @@ def plot_3D_concentration(res, T, dt):
     time = 1.0e3*np.arange(0, T-dt, dt)
 
     # at membrane of axon A (gamma)
-    x_M_A = 25.6; y_M_A = 0.34; z_M_A = 0.7
+    x_M_A = 25.6; y_M_A = 0.34; z_M_A = 0.4
     # 0.05 um above axon A (ECS)
     x_e_A = 25; y_e_A = 0.45; z_e_A = 0.65
-    #x_e_A = 50; y_e_A = 1.0; z_e_A = 0.7
     # mid point inside axon A (ICS)
-    x_i_A = 25; y_i_A = 0.3; z_i_A = 0.6
+    x_i_A = 25; y_i_A = 0.3; z_i_A = 0.3
 
     #################################################################
     # get data axon A is stimulated
@@ -333,8 +254,38 @@ def plot_3D_concentration(res, T, dt):
 
     f_phi_M = open('results/data/3D/solver/phi_M_3D.txt', "w")
     for p in phi_M:
-        f_phi_M.write("%.10f \n" % p*1000)
+        f_phi_M.write("%.10f \n" % p)
     f_phi_M.close()
+
+    f_K_e = open('results/data/3D/solver/K_ECS_3D.txt', "w")
+    for p in K_e:
+        f_K_e.write("%.10f \n" % p)
+    f_K_e.close()
+
+    f_K_i = open('results/data/3D/solver/K_ICS_3D.txt', "w")
+    for p in K_i:
+        f_K_i.write("%.10f \n" % p)
+    f_K_i.close()
+
+    f_Na_e = open('results/data/3D/solver/Na_ECS_3D.txt', "w")
+    for p in Na_e:
+        f_Na_e.write("%.10f \n" % p)
+    f_Na_e.close()
+
+    f_Na_i = open('results/data/3D/solver/Na_ICS_3D.txt', "w")
+    for p in Na_i:
+        f_Na_i.write("%.10f \n" % p)
+    f_Na_i.close()
+
+    f_E_Na = open('results/data/3D/solver/E_Na_3D.txt', "w")
+    for p in E_Na:
+        f_E_Na.write("%.10f \n" % p)
+    f_E_Na.close()
+
+    f_E_K = open('results/data/3D/solver/E_K_3D.txt', "w")
+    for p in E_K:
+        f_E_K.write("%.10f \n" % p)
+    f_E_K.close()
 
     return
 
@@ -344,7 +295,7 @@ if not os.path.isdir('results/figures'):
 
 # create figures
 res_3D = '1' # mesh resolution for 3D axon bundle
-T = 1.0e-1
 dt = 1.0e-4
+T = 3.0e-1
 
 plot_3D_concentration(res_3D, T, dt)

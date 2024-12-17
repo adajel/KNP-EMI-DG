@@ -149,14 +149,12 @@ def rhs_numba(t, states, values, parameters):
     beta_n = 0.125e3*math.exp(- 1.0e3*(states[3] + 65.0e-3) /80.)
     values[2] = (1 - states[2])*alpha_n - states[2]*beta_n
 
-    # Expressions for the Membrane component
-    i_Stim = parameters[7] * np.exp(-np.mod(t, 0.03)/0.002)*(t < 125e-3)
-
+    # Expressions for the pump
     i_pump = parameters[15] / ((1 + parameters[13] / parameters[11]) ** 2 \
            * (1 + parameters[14] / parameters[12]) ** 3)
 
     # Expressions for the Sodium channel component
-    i_Na = (parameters[2] + parameters[0]*states[1]*math.pow(states[0], 3) + i_Stim) * \
+    i_Na = (parameters[2] + parameters[0]*states[1]*math.pow(states[0], 3)) * \
            (states[3] - parameters[4]) + 3 * i_pump
 
     # Expressions for the Potassium channel component

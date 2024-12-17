@@ -33,7 +33,7 @@ if __name__=='__main__':
 
         # Time variables (PDEs)
         dt = 1.0e-4                      # global time step (s)
-        Tstop = 1.0e-1                   # global end time (s)
+        Tstop = 3.0e-1                   # global end time (s)
         t = Constant(0.0)                # time constant
 
         # Time variables (ODEs)
@@ -51,18 +51,21 @@ if __name__=='__main__':
         C_phi = C_M / dt                 # shorthand
 
         # Initial values
-        Na_i_init = Constant(12)         # Intracellular Na concentration
-        Na_e_init = Constant(100)        # extracellular Na concentration
-        K_i_init = Constant(125)         # intracellular K concentration
-        K_e_init = Constant(4)           # extracellular K concentration
-        Cl_i_init = Constant(137)        # intracellular Cl concentration
-        Cl_e_init = Constant(104)        # extracellular CL concentration
-        phi_M_init = Constant(-0.067738) # membrane potential (V)
+        Na_i_init = 12.838513108648856   # Intracellular Na concentration
+        Na_e_init = 100.71925900027354   # extracellular Na concentration
+        K_i_init = 124.15397583491901    # intracellular K concentration
+        K_e_init = 3.3236967382705265    # extracellular K concentration
+        Cl_e_init = Na_e_init + K_e_init # extracellular CL concentration
+        Cl_i_init = Na_i_init + K_i_init # intracellular CL concentration
+        phi_M_init = Constant(-0.07438609374462003)   # membrane potential (V)
+        phi_M_init_type = 'constant'
 
         # Set parameters
         params = namedtuple('params', ('dt', 'n_steps_ODE', 'F', 'psi', 
-            'phi_M_init', 'C_phi', 'C_M', 'R', 'temperature'))(dt, n_steps_ODE, \
-                    F, psi, phi_M_init, C_phi, C_M, R, temperature)
+            'phi_M_init', 'C_phi', 'C_M', 'R', 'temperature', 
+            'phi_M_init_type'))(dt, n_steps_ODE, \
+                    F, psi, phi_M_init, C_phi, C_M, R, temperature, \
+                    phi_M_init_type)
 
         # diffusion coefficients for each sub-domain
         D_Na_sub = {1:D_Na, 0:D_Na}
@@ -70,9 +73,9 @@ if __name__=='__main__':
         D_Cl_sub = {1:D_Cl, 0:D_Cl}
 
         # initial concentrations for each sub-domain
-        Na_init_sub = {1:Na_i_init, 0:Na_e_init}
-        K_init_sub = {1:K_i_init, 0:K_e_init}
-        Cl_init_sub = {1:Cl_i_init, 0:Cl_e_init}
+        Na_init_sub = {1:Constant(Na_i_init), 0:Constant(Na_e_init)}
+        K_init_sub = {1:Constant(K_i_init), 0:Constant(K_e_init)}
+        Cl_init_sub = {1:Constant(Cl_i_init), 0:Constant(Cl_e_init)}
         c_init_sub_type = 'constant'
 
         # Create ions (channel conductivity is set below for each model)
@@ -90,11 +93,11 @@ if __name__=='__main__':
         ion_list = [K, Cl, Na]
 
         # Membrane parameters
-        g_syn_bar = 40                   # synaptic conductivity (S/m**2)
+        g_syn_bar = 10                   # synaptic conductivity (S/m**2)
 
         # set stimulus ODE
         stimulus = {'stim_amplitude': g_syn_bar}
-        stimulus_locator = lambda x: (x[0] < 10e-6)
+        stimulus_locator = lambda x: (x[0] < 20e-6)
 
         # Set membrane parameters
         stim_params = namedtuple('membrane_params', ('g_syn_bar', \

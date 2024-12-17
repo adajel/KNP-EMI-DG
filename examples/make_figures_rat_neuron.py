@@ -9,8 +9,8 @@ import sys
 from fenics import * 
 import string
 
-from utils import pcws_constant_project
-from utils import interface_normal, plus, minus
+from knpemidg.utils import pcws_constant_project
+from knpemidg.utils import interface_normal, plus, minus
 
 from surf_plot.vtk_io import DltWriter
 from surf_plot.dlt_embedding import P0surf_to_DLT0_map
@@ -28,7 +28,7 @@ mpl.rcParams['image.cmap'] = 'jet'
 
 path = 'results/data/'
 
-def write_to_pvd(dt, T, fname):
+def write_to_pvd(dt, T, fname, ns):
     # read data file
     hdf5file = HDF5File(MPI.comm_world, fname, "r")
 
@@ -36,11 +36,11 @@ def write_to_pvd(dt, T, fname):
     subdomains = MeshFunction("size_t", mesh, 2)
     surfaces = MeshFunction("size_t", mesh, 1)
     hdf5file.read(mesh, '/mesh', False)
-    mesh.coordinates()[:] *= 1e6
+    #mesh.coordinates()[:] *= 1e6
     hdf5file.read(subdomains, '/subdomains')
     hdf5file.read(surfaces, '/surfaces')
 
-    P1 = FiniteElement('CG', mesh.ufl_cell(), 1)
+    P1 = FiniteElement('DG', mesh.ufl_cell(), 1)
     W = FunctionSpace(mesh, MixedElement(2*[P1]))
     V = FunctionSpace(mesh, P1)
 
@@ -53,12 +53,14 @@ def write_to_pvd(dt, T, fname):
     Cl = Function(V)
     phi = Function(V)
 
-    f_phi = File('results/data/rat_neuron/pot.pvd')
-    f_K = File('results/data/rat_neuron/K.pvd')
-    f_Na = File('results/data/rat_neuron/Na.pvd')
-    f_Cl = File('results/data/rat_neuron/Cl.pvd')
+    filename = 'results/data/rat_neuron/'
 
-    for n in range(1, int(T/dt)):
+    f_phi = XDMFFile(filename + 'pvd/pot.xdmf')
+    f_Na = XDMFFile(filename + 'pvd/Na.xdmf')
+    f_K = XDMFFile(filename + 'pvd/K.xdmf')
+    f_Cl = XDMFFile(filename + 'pvd/Cl.xdmf')
+
+    for n in ns:
 
         # read file
         hdf5file.read(u, "/concentrations/vector_" + str(n))
@@ -76,10 +78,15 @@ def write_to_pvd(dt, T, fname):
         hdf5file.read(w, "/potential/vector_" + str(n))
         assign(phi, w)
 
-        f_Na << Na, n
-        f_K << K, n
-        f_Cl << Cl, n
-        f_phi << phi, n
+        f_phi.write_checkpoint(phi, "phi", time_step=n, append=True)
+        f_Na.write_checkpoint(Na, "Na_", time_step=n, append=True)
+        f_K.write_checkpoint(K, "K_", time_step=n, append=True)
+        f_Cl.write_checkpoint(Cl, "Cl_", time_step=n, append=True)
+
+    f_phi.close()
+    f_Na.close()
+    f_K.close()
+    f_Cl.close()
 
     return
 
@@ -139,7 +146,7 @@ def get_time_series(dt, T, fname, x, y, z):
 
     return Na, K, Cl, phi
 
-def get_time_series_membrane(dt, T, fname, x, y, z):
+def get_time_series_membrane(dt, T, fname, x, y, z, tag):
     # read data file
     hdf5file = HDF5File(MPI.comm_world, fname, "r")
 
@@ -161,9 +168,10 @@ def get_time_series_membrane(dt, T, fname, x, y, z):
         point_1 = y_min <= x[1] <= y_max \
               and x_min <= x[0] <= x_max \
               and z_min <= x[2] <= z_max
-        if point_1:
+        if point_1 and surfaces[facet] == tag:
             print(x[0], x[1], x[2])
             surfaces[facet] = 10
+            break
 
     surfacesfile = File('surfaces_plot.pvd')
     surfacesfile << surfaces
@@ -319,28 +327,26 @@ def plot_3D_concentration(res, T, dt):
     x_M_D = -13.409898613569093; y_M_D = -75.18635834947439; z_M_D =  20.947389697500906
 
     # soma / axon membrane point
-    x_M_A = -2.2763068484050986; y_M_A = 30.793095066405495; z_M_A = -2.063150759041879
+    #x_M_A = -2.2763068484050986; y_M_A = 30.793095066405495; z_M_A = -2.063150759041879
+    x_M_A = 10.847329267445332; y_M_A = -3.630288586838453; z_M_A = -2.063150759041879
     # 0.05 um above axon A (ECS)
-    x_e_A = -25; y_e_A = y_M_A; z_e_A = z_M_A
+    x_e_A = x_M_A + 0.2; y_e_A = y_M_A; z_e_A = z_M_A
     # mid point inside axon A (ICS)
-    x_i_A = 0; y_i_A = y_M_A; z_i_A = z_M_A
+    x_i_A = x_M_A - 0.2; y_i_A = y_M_A; z_i_A = z_M_A
 
     #################################################################
     # get data axon A is stimulated
     fname = 'results/data/rat_neuron/results.h5'
 
-    # trace concentrations
-    phi_M, E_Na, E_K = get_time_series_membrane(dt, T, fname, x_M_A, y_M_A, z_M_A)
+    # trace concentrations at soma
+    phi_M_a, E_Na_a, E_K_a = get_time_series_membrane(dt, T, fname, x_M_A, y_M_A, z_M_A, 2)
 
     # bulk concentrations
     Na_e, K_e, Cl_e, _ = get_time_series(dt, T, fname, x_e_A, y_e_A, z_e_A)
     Na_i, K_i, Cl_i, _ = get_time_series(dt, T, fname, x_i_A, y_i_A, z_i_A)
 
-    # gating
-    n_HH, m_HH, h_HH = get_time_series_gating(dt, T, fname, x_M_A, y_M_A, z_M_A)
-
-    # trace concentrations
-    phi_M, E_Na, E_K = get_time_series_membrane(dt, T, fname, x_M_A, y_M_A, z_M_A)
+    # trace concentrations at dendrite
+    phi_M_d, E_Na_d, E_K_d = get_time_series_membrane(dt, T, fname, x_M_D, y_M_D, z_M_D, 1)
 
     #################################################################
     # get data axons BC are stimulated
@@ -380,25 +386,25 @@ def plot_3D_concentration(res, T, dt):
     plt.plot(Cl_i,linewidth=3, color='r')
 
     ax5 = fig.add_subplot(3,3,7)
-    plt.title(r'Membrane potential')
+    plt.title(r'Membrane potential axon')
     plt.ylabel(r'$\phi_M$ (mV)')
     plt.xlabel(r'time (ms)')
-    plt.plot(phi_M, linewidth=3)
+    plt.plot(phi_M_a, linewidth=3)
 
-    ax6 = fig.add_subplot(3,3,8)
+    ax5 = fig.add_subplot(3,3,8)
+    plt.title(r'Membrane potential dendrite')
+    plt.ylabel(r'$\phi_M$ (mV)')
+    plt.xlabel(r'time (ms)')
+    plt.plot(phi_M_d, linewidth=3)
+
+    ax6 = fig.add_subplot(3,3,9)
     plt.title(r'Na$^+$ reversal potential')
     plt.ylabel(r'E$_Na$ (mV)')
     plt.xlabel(r'time (ms)')
-    plt.plot(E_K, linewidth=3)
-    plt.plot(E_Na, linewidth=3)
-
-    ax6 = fig.add_subplot(3,3,9)
-    plt.title(r'gating')
-    plt.xlabel(r'time (ms)')
-    plt.plot(n_HH, linewidth=3, label="n")
-    plt.plot(m_HH, linewidth=3, label="m")
-    plt.plot(h_HH, linewidth=3, label="h")
-    plt.legend()
+    plt.plot(E_K_a, linewidth=3)
+    plt.plot(E_Na_a, linewidth=3)
+    plt.plot(E_K_d, linewidth=3)
+    plt.plot(E_Na_d, linewidth=3)
 
     # make pretty
     ax.axis('off')
@@ -408,8 +414,8 @@ def plot_3D_concentration(res, T, dt):
     plt.savefig('results/figures/pot_con_rat_3D.svg', format='svg')
 
     f_phi_M = open('phi_M_3D.txt', "w")
-    for p in phi_M:
-        f_phi_M.write("%.10f \n" % p*1000)
+    for p in phi_M_a:
+        f_phi_M.write("%.10f \n" % p)
     f_phi_M.close()
 
     return
@@ -693,12 +699,17 @@ if not os.path.isdir('results/figures'):
 res_3D = '0' # mesh resolution for 3D axon bundle
 fname = 'results/data/rat_neuron/results.h5'
 
-#T = 1.0e-2
-T = 1.0e-2
 dt = 1.0e-4
+T = 5.0e-2
 
-write_to_pvd(dt, T, fname)
+#ns = range(1, int(T/dt))
+#ns = (370, 380, 390, 400, 410, 420, 430, 440, 450)
+#ns = (16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28)
+#write_to_pvd(dt, T, fname, ns)
+
+#print("plot 3D concentration")
 #plot_3D_concentration(res_3D, T, dt)
+get_velocity(fname, T, dt)
+
 #plot_surface(fname, T, dt)
 #plot_surface_time(fname, T, dt)
-get_velocity(fname, T, dt)
