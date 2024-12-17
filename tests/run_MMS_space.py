@@ -16,10 +16,10 @@ if __name__ == '__main__':
     dt_0 = 1.0e-10
     Tstop = dt_0*2      # end time
 
-    degree = 2
+    degree = 1
 
-    hs, errors_ca, errors_cb, errors_phi = [], [], [], []
-    rates_ca, rates_cb, rates_phi = [], [], []
+    hs, errors_ca, errors_cb, errors_cc, errors_phi = [], [], [], [], []
+    rates_ca, rates_cb, rates_cc, rates_phi = [], [], [], []
 
     i = 0
     for resolution in range(2, 8):
@@ -35,23 +35,24 @@ if __name__ == '__main__':
         C_b1 = Constant(2); C_b2 = Constant(4)
         C_c1 = Constant(3); C_c2 = Constant(2)
 
-        z_a = Constant(-1.0); z_b = Constant(1.0); z_c = Constant(1.0)
+        z_a = Constant(1.0); z_b = Constant(-1.0); z_c = Constant(1.0)
 
         F = Constant(1); C_M = Constant(1.0);  R = Constant(1); temperature = Constant(1)
 
-        phi_M_init = Expression('sin(2*pi*(x[0]-x[1])) - cos(pi*(x[0]+x[1]))', degree=4)
+        #phi_M_init = Expression('sin(2*pi*(x[0]-x[1])) - cos(pi*(x[0]+x[1]))', degree=4)
+        phi_M_init = Expression('sin(2*pi*x[0])*sin(2*pi*x[1]) - \
+                                 cos(2*pi*x[0])*cos(2*pi*x[1])', degree=4)
+        phi_M_init_type = 'constant'
 
         # Set parameters
         params = namedtuple('params', (
         'D_a1', 'D_a2', 'D_b1', 'D_b2', 'D_c1', 'D_c2',\
         'C_a1', 'C_a2', 'C_b1', 'C_b2', 'C_c1', 'C_c2',\
-        'C_phi', \
-        'z_a', 'z_b', 'z_c', 'dt', 'F', 'C_M', 'phi_M_init',\
-        'R', 'temperature'))(D_a1, D_a2, D_b1, D_b2, D_c1, D_c2,\
+        'C_phi', 'z_a', 'z_b', 'z_c', 'dt', 'F', 'C_M', 'phi_M_init',\
+        'R', 'temperature', 'phi_M_init_type'))(D_a1, D_a2, D_b1, D_b2, D_c1, D_c2,\
                                    C_a1, C_a2, C_b1, C_b2, C_c1, C_c2,\
-                                   C_M/dt, \
-                                   z_a, z_b, z_c, dt, F, C_M, phi_M_init, \
-                                   R, temperature)
+                                   C_M/dt, z_a, z_b, z_c, dt, F, C_M, phi_M_init, \
+                                   R, temperature, phi_M_init_type)
 
         t = Constant(0.0)
 
@@ -187,17 +188,15 @@ if __name__ == '__main__':
 
         # Set solver parameters EMI (True is direct, and False is iterate) 
         direct_emi = True
-
         rtol_emi = 1E-6
         atol_emi = 1E-40
         threshold_emi = 0.9
 
         # Set solver parameters KNP (True is direct, and False is iterate) 
         direct_knp = True
-
         rtol_knp = 1E-7
         atol_knp = 1E-40
-        threshold_knp = None
+        threshold_knp = 7.5
 
         # Set parameters
         solver_params = namedtuple('solver_params', ('direct_emi',
@@ -209,7 +208,6 @@ if __name__ == '__main__':
                                       rtol_emi, rtol_knp, atol_emi, atol_knp, \
                                       threshold_emi, threshold_knp)
 
-        #uh_ca, uh_cb, uh_phi = S.solve_system(Tstop, dt, t)
         uh, uh_cc = S.solve_system_passive(Tstop, t, solver_params, membrane_params)
 
         uh_ca = uh[0]; uh_cb = uh[1]; uh_phi = uh[2]
@@ -228,6 +226,12 @@ if __name__ == '__main__':
                 metadata={'quadrature_degree': 5}) + inner(cb1 - uh_cb, cb1 -
                         uh_cb)*dX(1, metadata={'quadrature_degree': 5})
         error_cb = sqrt(abs(assemble(error_cb)))
+
+        # compute error concentration c
+        error_cc = inner(cc2 - uh_cc, cc2 - uh_cc)*dX(0,
+                metadata={'quadrature_degree': 5}) + inner(cc1 - uh_cc, cc1 -
+                        uh_cc)*dX(1, metadata={'quadrature_degree': 5})
+        error_cc = sqrt(abs(assemble(error_cc)))
 
         # compute error phi with norm for null_space solver for phi
         phi1_m_e = Constant(assemble(phi1*dX(1, metadata={'quadrature_degree': 5})))
@@ -251,6 +255,7 @@ if __name__ == '__main__':
         hs.append(mesh.hmin())
         errors_ca.append(error_ca)
         errors_cb.append(error_cb)
+        errors_cc.append(error_cc)
         errors_phi.append(error_phi)
 
         if len(errors_ca) > 1:
@@ -265,6 +270,12 @@ if __name__ == '__main__':
         else:
             rate_cb = np.nan
 
+        if len(errors_cc) > 1:
+            rate_cc = np.log(errors_cc[-1]/errors_cc[-2])/np.log(hs[-1]/hs[-2])
+            rates_cc.append(rate_cc)
+        else:
+            rate_cc = np.nan
+
         if len(errors_phi) > 1:
             rate_phi = np.log(errors_phi[-1]/errors_phi[-2])/np.log(hs[-1]/hs[-2])
             rates_phi.append(rate_phi)
@@ -273,8 +284,13 @@ if __name__ == '__main__':
 
         msg = f'|ca-cah|_0 = {error_ca:.4E} [{rate_ca:.2f}]'
         mesh.mpi_comm().rank == 0 and print(GREEN % msg)
+
         msg = f'|cb-cbh|_0 = {error_cb:.4E} [{rate_cb:.2f}]'
         mesh.mpi_comm().rank == 0 and print(GREEN % msg)
+
+        msg = f'|cc-cch|_0 = {error_cc:.4E} [{rate_cc:.2f}]'
+        mesh.mpi_comm().rank == 0 and print(GREEN % msg)
+
         msg = f'|phi-phih|_0 = {error_phi:.4E} [{rate_phi:.2f}]'
         mesh.mpi_comm().rank == 0 and print(GREEN % msg)
 
@@ -289,6 +305,11 @@ if __name__ == '__main__':
     print(rates_cb)
     for i in range(len(hs)):
         print(hs[i], errors_cb[i])
+
+    print("concentration c")
+    print(rates_cc)
+    for i in range(len(hs)):
+        print(hs[i], errors_cc[i])
 
     print("phi")
     print(rates_phi)

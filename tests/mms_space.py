@@ -12,8 +12,6 @@ def setup_mms(params, t, mesh):
 
     domain
     '''
-    order = 2
-    #mesh = UnitSquareMesh(2**(2+order), 2**(2+order), 'crossed')
 
     x_bar = SpatialCoordinate(mesh)
     x = x_bar[0]
@@ -30,26 +28,26 @@ def setup_mms(params, t, mesh):
     params.dt, params.F, params.R, params.temperature
 
     # define exact solutions
-    k_a1 = 0.7 + 0.3*sin(2*pi*x)*sin(2*pi*y)#*exp(-t)
-    k_b1 = 0.7 + 0.3*sin(2*pi*x)*sin(2*pi*y)#*exp(-t)
+    k_a1 = 0.3 + 0.2*sin(2*pi*x)*sin(2*pi*y)
+    k_b1 = 0.9 + 0.3*cos(2*pi*x)*sin(2*pi*y)
     k_c1 = - 1/z_c * (z_a*k_a1 + z_b*k_b1)
-    phi_1 = sin(2*pi*(x-y))
+    phi_1 = cos(2*pi*x)*cos(2*pi*y)
 
-    k_a2 = 0.7 + 0.2*cos(2*pi*x)*cos(2*pi*y)#*exp(-t)
-    k_b2 = 0.7 + 0.2*cos(2*pi*x)*cos(2*pi*y)#*exp(-t)
+    k_a2 = 0.3 + 0.2*cos(2*pi*x)*cos(2*pi*y)
+    k_b2 = 0.8 + 0.3*sin(2*pi*x)*cos(2*pi*y)
     k_c2 = - 1/z_c * (z_a*k_a2 + z_b*k_b2)
-    phi_2 = cos(pi*(x+y))
+    phi_2 = sin(2*pi*x)*sin(2*pi*y)
 
-    k_a1_init = Expression('0.7 + 0.3*sin(2*pi*x[0])*sin(2*pi*x[1])', degree=4)
-    k_b1_init = Expression('0.7 + 0.3*sin(2*pi*x[0])*sin(2*pi*x[1])', degree=4)
-    k_c1_init = Expression('- 1/z_c * (z_a*(0.7 + 0.3*sin(2*pi*x[0])*sin(2*pi*x[1])) \
-                                     + z_b*(0.7 + 0.3*sin(2*pi*x[0])*sin(2*pi*x[1])))', \
+    k_a1_init = Expression('0.3 + 0.2*sin(2*pi*x[0])*sin(2*pi*x[1])', degree=4)
+    k_b1_init = Expression('0.9 + 0.3*cos(2*pi*x[0])*sin(2*pi*x[1])', degree=4)
+    k_c1_init = Expression('- 1/z_c * (z_a*(0.3 + 0.2*sin(2*pi*x[0])*sin(2*pi*x[1])) \
+                                     + z_b*(0.9 + 0.3*cos(2*pi*x[0])*sin(2*pi*x[1])))', \
                                      z_a=z_a, z_b=z_b, z_c=z_c, degree=4)
 
-    k_a2_init = Expression('0.7 + 0.2*cos(2*pi*x[0])*cos(2*pi*x[1])', degree=4)
-    k_b2_init = Expression('0.7 + 0.2*cos(2*pi*x[0])*cos(2*pi*x[1])', degree=4)
-    k_c2_init = Expression('- 1/z_c * (z_a*(0.7 + 0.2*cos(2*pi*x[0])*cos(2*pi*x[1])) \
-                                     + z_b*(0.7 + 0.2*cos(2*pi*x[0])*cos(2*pi*x[1])))', \
+    k_a2_init = Expression('0.3 + 0.2*cos(2*pi*x[0])*cos(2*pi*x[1])', degree=4)
+    k_b2_init = Expression('0.8 + 0.3*sin(2*pi*x[0])*cos(2*pi*x[1])', degree=4)
+    k_c2_init = Expression('- 1/z_c * (z_a*(0.3 + 0.2*cos(2*pi*x[0])*cos(2*pi*x[1])) \
+                                     + z_b*(0.8 + 0.3*sin(2*pi*x[0])*cos(2*pi*x[1])))', \
                                      z_a=z_a, z_b=z_b, z_c=z_c, degree=4, )
 
     # time derivative concentrations

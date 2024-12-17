@@ -18,8 +18,8 @@ if __name__ == '__main__':
 
     degree = 1
 
-    hs, errors_ca, errors_cb, errors_phi = [], [], [], []
-    rates_ca, rates_cb, rates_phi = [], [], []
+    hs, errors_ca, errors_cb, errors_cc, errors_phi = [], [], [], [], []
+    rates_ca, rates_cb, rates_cc, rates_phi = [], [], [], []
 
     # fix spatial resolution
     resolution = 6
@@ -46,29 +46,30 @@ if __name__ == '__main__':
         dt = dt_0/(2**i)     # time step
         print("dt", dt)
 
-        D_a1 = Constant(5); D_a2 = Constant(5)
-        D_b1 = Constant(2); D_b2 = Constant(2)
-        D_c1 = Constant(1); D_c2 = Constant(1)
+        D_a1 = Constant(6); D_a2 = Constant(5)
+        D_b1 = Constant(3); D_b2 = Constant(4)
+        D_c1 = Constant(1); D_c2 = Constant(2)
 
-        C_a1 = Constant(4); C_a2 = Constant(4)
-        C_b1 = Constant(4); C_b2 = Constant(4)
-        C_c1 = Constant(4); C_c2 = Constant(4)
+        C_a1 = Constant(1); C_a2 = Constant(2)
+        C_b1 = Constant(2); C_b2 = Constant(4)
+        C_c1 = Constant(3); C_c2 = Constant(2)
 
-        z_a = Constant(-1.0); z_b = Constant(1.0); z_c = Constant(1.0)
+        z_a = Constant(1.0); z_b = Constant(-1.0); z_c = Constant(1.0)
         F = Constant(1); C_M = Constant(1); R = Constant(1); temperature = Constant(1)
 
         phi_M_init = Expression('(1 + x[0] + x[1]) - (1 + x[0] - x[1])', degree=4)
+        phi_M_init_type = 'constant'
 
         # Make some parameters up
         params = namedtuple('params', (
         'D_a1', 'D_a2', 'D_b1', 'D_b2', 'D_c1', 'D_c2', \
         'C_a1', 'C_a2', 'C_b1', 'C_b2', 'C_c1', 'C_c2', 'C_phi', \
         'z_a', 'z_b', 'z_c', 'dt', 'F', 'C_M', 'phi_M_init',\
-        'R', 'temperature', 't'))(D_a1, D_a2, D_b1, D_b2, D_c1, D_c2,\
+        'R', 'temperature', 't', 'phi_M_init_type'))(D_a1, D_a2, D_b1, D_b2, D_c1, D_c2,\
                                   C_a1, C_a2, C_b1, C_b2, C_c1, C_c2,\
                                   C_M/dt, \
                                   z_a, z_b, z_c, dt, F, C_M, phi_M_init, \
-                                  R, temperature, t)
+                                  R, temperature, t, phi_M_init_type)
 
         mms = setup_mms(params, t, mesh)
 
@@ -207,6 +208,10 @@ if __name__ == '__main__':
         error_cb = inner(cb2 - uh_cb, cb2 - uh_cb)*dX(0) + inner(cb1 - uh_cb, cb1 - uh_cb)*dX(1)
         error_cb = sqrt(abs(assemble(error_cb)))
 
+        # compute error concentration b
+        error_cc = inner(cc2 - uh_cc, cc2 - uh_cc)*dX(0) + inner(cc1 - uh_cc, cc1 - uh_cc)*dX(1)
+        error_cc = sqrt(abs(assemble(error_cc)))
+
         # compute error phi with norm for null_space solver for phi
         phi1_m_e = Constant(assemble(phi1*dX(1, metadata={'quadrature_degree': 5})))
         phi2_m_e = Constant(assemble(phi2*dX(0, metadata={'quadrature_degree': 5})))
@@ -231,6 +236,7 @@ if __name__ == '__main__':
         hs.append(dt)
         errors_ca.append(error_ca)
         errors_cb.append(error_cb)
+        errors_cc.append(error_cc)
         errors_phi.append(error_phi)
 
         if len(errors_ca) > 1:
@@ -245,6 +251,12 @@ if __name__ == '__main__':
         else:
             rate_cb = np.nan
 
+        if len(errors_cc) > 1:
+            rate_cc = np.log(errors_cc[-1]/errors_cc[-2])/np.log(hs[-1]/hs[-2])
+            rates_cc.append(rate_cc)
+        else:
+            rate_cc = np.nan
+
         if len(errors_phi) > 1:
             rate_phi = np.log(errors_phi[-1]/errors_phi[-2])/np.log(hs[-1]/hs[-2])
             rates_phi.append(rate_phi)
@@ -253,8 +265,13 @@ if __name__ == '__main__':
 
         msg = f'|ca-cah|_0 = {error_ca:.4E} [{rate_ca:.2f}]'
         mesh.mpi_comm().rank == 0 and print(GREEN % msg)
+
         msg = f'|cb-cbh|_0 = {error_cb:.4E} [{rate_cb:.2f}]'
         mesh.mpi_comm().rank == 0 and print(GREEN % msg)
+
+        msg = f'|cc-cch|_0 = {error_cc:.4E} [{rate_cc:.2f}]'
+        mesh.mpi_comm().rank == 0 and print(GREEN % msg)
+
         msg = f'|phi-phih|_0 = {error_phi:.4E} [{rate_phi:.2f}]'
         mesh.mpi_comm().rank == 0 and print(GREEN % msg)
 
@@ -269,6 +286,11 @@ if __name__ == '__main__':
     print(rates_cb)
     for i in range(len(hs)):
         print(hs[i], errors_cb[i])
+
+    print("concentration c")
+    print(rates_cc)
+    for i in range(len(hs)):
+        print(hs[i], errors_cc[i])
 
     print("phi")
     print(rates_phi)

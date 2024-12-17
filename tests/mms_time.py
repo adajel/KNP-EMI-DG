@@ -4,7 +4,7 @@ from collections import namedtuple
 MMSData = namedtuple('MMSData', ('solution', 'rhs', 'normals'))
 
 def setup_mms(params, t, mesh):
-    '''We solve EMI on
+    ''' We solve EMI on
 
     [       ]
     [  [ ]  ]
@@ -12,7 +12,6 @@ def setup_mms(params, t, mesh):
 
     domain
     '''
-    order = 2
     x, y = SpatialCoordinate(mesh)
 
     # We will vary this outside
@@ -26,27 +25,27 @@ def setup_mms(params, t, mesh):
     params.dt, params.F, params.R, params.temperature
 
     # define exact solutions
-    k_a1 = 1 + (x + y) + 0.3 * cos(2 * pi * t)
+    k_a1 = 1 + (x + y) + 0.2 * cos(2 * pi * t)
     k_b1 = 1 + (x + y) + 0.3 * cos(2 * pi * t)
     k_c1 = - 1/z_c * (z_a*k_a1 + z_b*k_b1)
     phi_1 = (1 + x + y) * (1 + t**2)
 
     k_a2 = 1 + (x + y) + 0.5 * sin(2 * pi * t)
-    k_b2 = 1 + (x + y) + 0.5 * sin(2 * pi * t)
+    k_b2 = 1 + (x + y) + 0.6 * sin(2 * pi * t)
     k_c2 = - 1/z_c * (z_a*k_a2 + z_b*k_b2)
     phi_2 = (1 + x - y) * (1 + t**2)
 
-    k_a1_dt = - 0.3 * 2 * pi * sin(2 * pi * t)
+    k_a1_dt = - 0.2 * 2 * pi * sin(2 * pi * t)
     k_b1_dt = - 0.3 * 2 * pi * sin(2 * pi * t)
-    k_c1_dt = 0
+    k_c1_dt = - 1/z_c * (z_a*k_a1_dt + z_b*k_b1_dt)
     k_a2_dt = 0.5 * 2 * pi * cos(2 * pi * t)
-    k_b2_dt = 0.5 * 2 * pi * cos(2 * pi * t)
-    k_c2_dt = 0
+    k_b2_dt = 0.6 * 2 * pi * cos(2 * pi * t)
+    k_c2_dt = - 1/z_c * (z_a*k_a2_dt + z_b*k_b2_dt)
 
     # define initial conditions
-    k_a1_init = Expression('1 + (x[0] + x[1]) + 0.3', degree=4)
+    k_a1_init = Expression('1 + (x[0] + x[1]) + 0.2', degree=4)
     k_b1_init = Expression('1 + (x[0] + x[1]) + 0.3', degree=4)
-    k_c1_init = Expression('- 1/z_c * (z_a*(1 + (x[0] + x[1]) + 0.3) + z_b*(1 + (x[0] + x[1]) + 0.3))', z_a=z_a, z_b=z_b, z_c=z_c, degree=4)
+    k_c1_init = Expression('- 1/z_c * (z_a*(1 + (x[0] + x[1]) + 0.3) + z_b*(1 + (x[0] + x[1]) + 0.2))', z_a=z_a, z_b=z_b, z_c=z_c, degree=4)
 
     k_a2_init = Expression('1 + (x[0] + x[1])', degree=4)
     k_b2_init = Expression('1 + (x[0] + x[1])', degree=4)
