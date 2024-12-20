@@ -10,6 +10,8 @@ from knpemidg.utils import interface_normal, plus, minus
 from knpemidg.utils import CellCenterDistance
 from knpemidg.membrane import MembraneModel
 
+from memory_profiler import profile
+
 # define jump across the membrane (interface gamma)
 JUMP = lambda f, n: minus(f, n) - plus(f, n)
 
@@ -434,6 +436,7 @@ class SolverEMI:
 
         return
 
+    @profile
     def solve_emi(self):
         """ solve emi system using either a direct or iterative solver """
 

@@ -10,6 +10,8 @@ from knpemidg.utils import interface_normal, plus, minus
 from knpemidg.utils import CellCenterDistance
 from knpemidg.membrane import MembraneModel
 
+from memory_profiler import profile
+
 # define jump across the membrane (interface gamma)
 JUMP = lambda f, n: minus(f, n) - plus(f, n)
 
@@ -472,6 +474,7 @@ class Solver:
 
         return
 
+    #@profile
     def solve_emi(self):
         """ solve emi system using either a direct or iterative solver """
 
@@ -727,6 +730,7 @@ class Solver:
 
         return
 
+    #@profile
     def solve_knp(self):
         """ solve knp system """
 
@@ -1187,6 +1191,11 @@ class Solver:
         num_cells = self.mesh.num_cells()
         dofs_emi = self.V_emi.dim()
         dofs_knp = self.V_knp.dim()
+
+        print("--------------------------")
+        print("dofs_knp:", dofs_knp)
+        print("dofs_emi:", dofs_emi)
+        print("--------------------------")
 
         if self.direct_emi:
             self.file_emi_solve = open(path_timings + "emi_solve_dir_%d.txt" % reso, "w")
