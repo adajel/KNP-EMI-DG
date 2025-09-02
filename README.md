@@ -29,20 +29,23 @@ conda activate KNP-EMI
 
 ```bash
 
-# run MMS test in space
-python run_MMS_space.py
+# install package
+python3 -m pip install -e .
 
 # run MMS test in space
-python run_MMS_time.py
+python3 tests/run_MMS_space.py
+
+# run MMS test in space
+python3 tests/run_MMS_time.py
 
 # run simulation on idealized 2D geometry
-python run_2D.py
+python3 examples/run_2D.py
 
 # run simulation on idealized 3D geometry
-python run_3D.py
+python3 examples/run_3D.py
 
 # run simulation on realistic 3D geometry of rat neuron
-python run_rat_neuron.py
+python3 examples/run_rat_neuron.py
 
 ```
 
