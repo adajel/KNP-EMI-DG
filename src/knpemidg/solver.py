@@ -10,8 +10,6 @@ from knpemidg.utils import interface_normal, plus, minus
 from knpemidg.utils import CellCenterDistance
 from knpemidg.membrane import MembraneModel
 
-from memory_profiler import profile
-
 # define jump across the membrane (interface gamma)
 JUMP = lambda f, n: minus(f, n) - plus(f, n)
 
@@ -183,9 +181,12 @@ class Solver:
         for idx, ion in enumerate(self.ion_list):
 
             # if initial conditions are constants
-            if ion['c_init_sub_type'] == 'constant':
+            if ion['c_init_sub_type'] == 'constant' or ion['c_init_sub_type'] == 'expression':
                 # interpolate initial conditions to global function and assign
-                c_init = self.make_global(ion['c_init_sub'])
+                if ion['c_init_sub_type'] == 'constant':
+                    c_init = self.make_global(ion['c_init_sub'])
+                else:
+                    c_init = self.make_global_expression(ion['c_init_sub'])
 
                 if idx == len(ion_list) - 1:
                     # set initial concentrations for eliminated ion
@@ -201,15 +202,15 @@ class Solver:
                     assign(self.c_prev_n.sub(idx), ion['c_init_sub'])
                     assign(self.c_prev_k.sub(idx), ion['c_init_sub'])
             else:
-                print("Type of initial condition not recognized - please \
-                       spesify whether initial condition is constant or \
-                       function")
+                print(f"""Type of initial condition \"{ion['c_init_sub_type']}\" not
+                    recognized - please spesify whether initial condition is
+                    \"constant\", \"expression\" or \"function\" """)
                 sys.exit(0)
 
         # define function space of piecewise constants on interface gamma for solution to ODEs
         self.Q = FunctionSpace(self.mesh, 'Discontinuous Lagrange Trace', 0)
 
-        if self.phi_M_init_type == 'constant':
+        if self.phi_M_init_type == 'constant' or 'expression':
             # set initial membrane potential with initial condition for phi_M
             # given by constant
             self.phi_M_prev_PDE = Function(self.Q)
@@ -218,9 +219,9 @@ class Solver:
             # given by function (i.e. from a previous simulation)
             self.phi_M_prev_PDE = self.params.phi_M_init
         else:
-            print("Type of initial condition not recognized - please \
-                   spesify whether initial condition is constant or \
-                   function")
+            print(f"""Type of initial condition \"{ion['c_init_sub_type']}\" not
+                    recognized - please spesify whether initial condition is
+                    \"constant\", \"expression\" or \"function\" """)
             sys.exit(0)
 
         #self.phi_M_prev_PDE = self.params.phi_M_init
@@ -474,7 +475,6 @@ class Solver:
 
         return
 
-    #@profile
     def solve_emi(self):
         """ solve emi system using either a direct or iterative solver """
 
@@ -730,7 +730,6 @@ class Solver:
 
         return
 
-    #@profile
     def solve_knp(self):
         """ solve knp system """
 
@@ -1321,3 +1320,43 @@ class Solver:
         q.vector().apply("insert")
 
         return q
+
+    def make_global_expression(self, f):
+
+        mesh = self.mesh
+        subdomains = self.subdomains
+
+        # DG space for projecting coefficients
+        Q = FunctionSpace(self.mesh, self.PK_knp)
+
+        dofmap = Q.dofmap()
+
+        # list of list of dofs for each sub-domain
+        o_dofss = {key: [] for key in f.keys()}
+
+        i = 0
+        # fill list with relevant dofs for each sub-domains
+        for cell in cells(mesh):
+            for tag, function in f.items():
+                if subdomains[cell] == tag:
+                    o_dofss[tag].extend(dofmap.cell_dofs(cell.index()))
+                    i += 1
+                    break
+
+        # check that all cells are matched with tags in loop above
+        assert sum(1 for _ in cells(mesh)) == i, \
+               "Dictionaries for DG data must match cell tags in mesh"
+
+        # set dofs list
+        for key, o_dofs in o_dofss.items():
+            o_dofs = list(set(o_dofs))
+
+        F = Function(Q)
+
+        for tag, function in f.items():
+            # interpolate data for sub-domain with tag tag
+            F_tag = interpolate(function, Q)
+            # copy to global function
+            F.vector()[o_dofss[tag]] = F_tag.vector()[o_dofss[tag]]
+
+        return F

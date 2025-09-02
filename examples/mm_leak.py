@@ -8,10 +8,9 @@ def init_state_values(**values):
     Initialize state values
     """
     # Init values
-    #phi_M_init = -0.0677379636231   # membrane potential (V)
     phi_M_init = -0.07438609374462003   # membrane potential (V)
 
-    init_values = np.array([phi_M_init], dtype=np.float_)
+    init_values = np.array([phi_M_init], dtype=np.float64)
 
     # State indices and limit checker
     state_ind = dict([("V", 0)])
@@ -39,14 +38,10 @@ def init_parameter_values(**values):
     m_Na = 7.7              # threshold ICS Na (mol/m**3)
     I_max = 0.449           # max pump strength (A/m**2)
 
-    # TODO
-    #g_leak_Na = 0.0   # Na leak conductivity (S/m**2)
-    #g_leak_K  = 0.0   # K leak conductivity (S/m**2)
-
     # Set initial parameter values
     init_values = np.array([g_leak_Na, g_leak_K, \
                             0, 0, 0, 0, 0, 0, 0, 0, 0,
-                            m_K, m_Na, I_max], dtype=np.float_)
+                            m_K, m_Na, I_max], dtype=np.float64)
 
     # Parameter indices and limit checker
     param_ind = dict([("g_leak_Na", 0), ("g_leak_K", 1),
@@ -115,18 +110,6 @@ def rhs_numba(t, states, values, parameters):
     Compute the right hand side of the\
         hodgkin_huxley_squid_axon_model_1952_original ODE
     """
-
-    # Assign states
-    #assert(len(states)) == 4
-
-    # Assign parameters
-    #assert(len(parameters)) == 10
-
-    # Init return args
-    #if values is None:
-         #values = np.zeros((4,), dtype=np.float_)
-    #else:
-         #assert isinstance(values, np.ndarray) and values.shape == (4,)
 
     # Expressions for stimuli
     i_Stim = parameters[5] * np.exp(-np.mod(t, 0.03)/0.002)

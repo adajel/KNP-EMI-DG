@@ -13,7 +13,7 @@ def init_state_values(**values):
     h_init = 0.8542015627820805         # gating variable h
     phi_M_init = -0.07438609374462003   # membrane potential (V)
 
-    init_values = np.array([m_init, h_init, n_init, phi_M_init], dtype=np.float_)
+    init_values = np.array([m_init, h_init, n_init, phi_M_init], dtype=np.float64)
 
     # State indices and limit checker
     state_ind = dict([("m", 0), ("h", 1), ("n", 2), ("V", 3)])
@@ -48,7 +48,7 @@ def init_parameter_values(**values):
                             g_leak_Na, g_leak_K, \
                             0, 0, 0, 0, \
                             0, 0, 0, 0, 0,
-                            m_K, m_Na, I_max], dtype=np.float_)
+                            m_K, m_Na, I_max], dtype=np.float64)
 
 
     # Parameter indices and limit checker
@@ -121,18 +121,6 @@ def rhs_numba(t, states, values, parameters):
     Compute the right hand side of the\
         hodgkin_huxley_squid_axon_model_1952_original ODE
     """
-
-    # Assign states
-    #assert(len(states)) == 4
-
-    # Assign parameters
-    #assert(len(parameters)) == 11
-
-    # # Init return args
-    # if values is None:
-    #     values = np.zeros((4,), dtype=np.float_)
-    # else:
-    #     assert isinstance(values, np.ndarray) and values.shape == (4,)
 
     # Expressions for the m gate component
     alpha_m = 0.1e3 * (25. - 1.0e3*(states[3] + 65.0e-3))/(math.exp((25. - 1.0e3*(states[3] + 65.0e-3))/10.) - 1)

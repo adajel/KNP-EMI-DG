@@ -42,7 +42,7 @@ if __name__ == '__main__':
         #phi_M_init = Expression('sin(2*pi*(x[0]-x[1])) - cos(pi*(x[0]+x[1]))', degree=4)
         phi_M_init = Expression('sin(2*pi*x[0])*sin(2*pi*x[1]) - \
                                  cos(2*pi*x[0])*cos(2*pi*x[1])', degree=4)
-        phi_M_init_type = 'constant'
+        phi_M_init_type = 'expression'
 
         # Set parameters
         params = namedtuple('params', (
@@ -139,7 +139,7 @@ if __name__ == '__main__':
         a_init_sub = {1:ca1_init, 0:ca2_init}
         b_init_sub = {1:cb1_init, 0:cb2_init}
         c_init_sub = {1:cc1_init, 0:cc2_init}
-        c_init_sub_type = 'constant'
+        c_init_sub_type = 'expression'
 
         # create ions
         ion_a = {'D_sub':D_a_sub,
