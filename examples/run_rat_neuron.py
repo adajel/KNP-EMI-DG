@@ -13,6 +13,9 @@ from knpemidg import Solver
 import mm_hh_no_stim as mm_hh_no_stim
 import mm_leak as mm_leak
 
+from knpemidg.utils import pcws_constant_project
+from knpemidg.utils import interface_normal, plus, minus
+
 # Define colors for printing
 class bcolors:
     HEADER = '\033[95m'
@@ -24,6 +27,28 @@ class bcolors:
     ENDC = '\033[0m'
     BOLD = '\033[1m'
     UNDERLINE = '\033[4m'
+
+class Solver3D(Solver):
+    """ sub-class for solving 2D problem """
+
+    def __init__(self, params, ion_list, degree_emi=1, degree_knp=1, mms=None, sf=1):
+        Solver.__init__(self, params, ion_list, degree_emi=1, degree_knp=1, mms=None, sf=1)
+
+        return
+
+    def update_ode(self, ode_model):
+        """ Update parameters in ODE solver (based on previous PDEs step)
+            specific to membrane model """
+
+        # set extracellular trace of K concentration at membrane
+        K_e = plus(self.c_prev_k.split()[0], self.n_g)
+        ode_model.set_parameter('K_e', pcws_constant_project(K_e, self.Q))
+
+        # set intracellular trace of Na concentration at membrane
+        Na_i = minus(self.ion_list[-1]['c'], self.n_g)
+        ode_model.set_parameter('Na_i', pcws_constant_project(Na_i, self.Q))
+
+        return
 
 if __name__ == "__main__":
 
@@ -59,11 +84,15 @@ if __name__ == "__main__":
     phi_M_init = Constant(-0.07438609374462003)   # membrane potential (V)
     phi_M_init_type = 'constant'
 
+    # set background charge (no background charge in this scenario)
+    rho_sub = {0:Constant(0), 1:Constant(0), 2:Constant(0)}
+
     # Set parameters
     params = namedtuple('params', ('dt', 'n_steps_ODE', 'F', 'psi', \
-            'phi_M_init', 'C_phi', 'C_M', 'R', 'temperature', 'phi_M_init_type'))(dt, \
+            'phi_M_init', 'C_phi', 'C_M', 'R', 'temperature',
+            'phi_M_init_type', 'rho_sub'))(dt, \
             n_steps_ODE, F, psi, phi_M_init, C_phi, C_M, R, temperature, \
-            phi_M_init_type)
+            phi_M_init_type, rho_sub)
 
     # diffusion coefficients for each sub-domain
     D_Na_sub = {1:D_Na, 0:D_Na}
@@ -76,16 +105,35 @@ if __name__ == "__main__":
     Cl_init_sub = {1:Constant(Cl_i_init), 0:Constant(Cl_e_init)}
     c_init_sub_type = 'constant'
 
+    # set source terms to be zero for all ion species
+    f_source_Na = Constant(0)
+    f_source_K = Constant(0)
+    f_source_Cl = Constant(0)
+
     # Create ions (channel conductivity is set below in the membrane model)
-    Na = {'c_init_sub':Na_init_sub, 'c_init_sub_type':c_init_sub_type,
+    Na = {'c_init_sub':Na_init_sub,
+          'c_init_sub_type':c_init_sub_type,
           'bdry': Constant((0, 0)),
-          'z':1.0, 'name':'Na', 'D_sub':D_Na_sub}
-    K = {'c_init_sub':K_init_sub, 'c_init_sub_type':c_init_sub_type,
+          'z':1.0,
+          'name':'Na',
+          'D_sub':D_Na_sub,
+          'f_source': f_source_Na}
+
+    K = {'c_init_sub':K_init_sub,
+         'c_init_sub_type':c_init_sub_type,
          'bdry': Constant((0, 0)),
-         'z':1.0, 'name':'K', 'D_sub':D_K_sub}
-    Cl = {'c_init_sub':Cl_init_sub, 'c_init_sub_type':c_init_sub_type,
+         'z':1.0,
+         'name':'K',
+         'D_sub':D_K_sub,
+         'f_source': f_source_K}
+
+    Cl = {'c_init_sub':Cl_init_sub,
+          'c_init_sub_type':c_init_sub_type,
           'bdry': Constant((0, 0)),
-          'z':-1.0, 'name':'Cl', 'D_sub':D_Cl_sub}
+          'z':-1.0,
+          'name':'Cl',
+          'D_sub':D_Cl_sub,
+          'f_source': f_source_Cl}
 
     # Create ion list. NB! The last ion in list will be eliminated, and should 
     # be the ion with the smallest diffusion coefficient
@@ -190,7 +238,7 @@ if __name__ == "__main__":
     ode_models = {1: mm_leak, 2: mm_hh_no_stim}
 
     # Solve system
-    S = Solver(params, ion_list)                    # create solver
+    S = Solver3D(params, ion_list)                  # create solver
     S.setup_domain(mesh, subdomains, surfaces)      # setup meshes
     S.setup_parameters()                            # setup physical parameters
     S.setup_FEM_spaces()                            # setup function spaces and numerical parameters

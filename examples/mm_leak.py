@@ -41,7 +41,7 @@ def init_parameter_values(**values):
     # Set initial parameter values
     init_values = np.array([g_leak_Na, g_leak_K, \
                             0, 0, 0, 0, 0, 0, 0, 0, 0,
-                            m_K, m_Na, I_max], dtype=np.float64)
+                            m_K, m_Na, I_max, 0], dtype=np.float64)
 
     # Parameter indices and limit checker
     param_ind = dict([("g_leak_Na", 0), ("g_leak_K", 1),
@@ -49,7 +49,7 @@ def init_parameter_values(**values):
                       ("Cm", 4), ("stim_amplitude", 5),
                       ("I_ch_Na", 6), ("I_ch_K", 7), ("I_ch_Cl", 8),
                       ("K_e", 9), ("Na_i", 10),
-                      ("m_K", 11), ("m_Na", 12), ("I_max", 13)])
+                      ("m_K", 11), ("m_Na", 12), ("I_max", 13), ("E_Cl", 14)])
 
     for param_name, value in values.items():
         if param_name not in param_ind:
@@ -86,7 +86,7 @@ def parameter_indices(*params):
                        ("Cm", 4), ("stim_amplitude", 5), \
                        ("I_ch_Na", 6), ("I_ch_K", 7), ("I_ch_Cl", 8),
                        ("K_e", 9), ("Na_i", 10),
-                       ("m_K", 11), ("m_Na", 12), ("I_max", 13)])
+                       ("m_K", 11), ("m_Na", 12), ("I_max", 13), ("E_Cl", 14)])
 
     indices = []
     for param in params:

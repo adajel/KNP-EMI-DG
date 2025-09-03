@@ -44,15 +44,18 @@ if __name__ == '__main__':
                                  cos(2*pi*x[0])*cos(2*pi*x[1])', degree=4)
         phi_M_init_type = 'expression'
 
+        # set background charge (no background charge in this scenario)
+        rho_sub = {0:Constant(0), 1:Constant(0), 2:Constant(0)}
+
         # Set parameters
         params = namedtuple('params', (
         'D_a1', 'D_a2', 'D_b1', 'D_b2', 'D_c1', 'D_c2',\
         'C_a1', 'C_a2', 'C_b1', 'C_b2', 'C_c1', 'C_c2',\
         'C_phi', 'z_a', 'z_b', 'z_c', 'dt', 'F', 'C_M', 'phi_M_init',\
-        'R', 'temperature', 'phi_M_init_type'))(D_a1, D_a2, D_b1, D_b2, D_c1, D_c2,\
+        'R', 'temperature', 'phi_M_init_type', 'rho_sub'))(D_a1, D_a2, D_b1, D_b2, D_c1, D_c2,\
                                    C_a1, C_a2, C_b1, C_b2, C_c1, C_c2,\
                                    C_M/dt, z_a, z_b, z_c, dt, F, C_M, phi_M_init, \
-                                   R, temperature, phi_M_init_type)
+                                   R, temperature, phi_M_init_type, rho_sub)
 
         t = Constant(0.0)
 
@@ -141,6 +144,11 @@ if __name__ == '__main__':
         c_init_sub = {1:cc1_init, 0:cc2_init}
         c_init_sub_type = 'expression'
 
+        # set source terms to be zero for all ion species
+        f_source_a = Constant(0)
+        f_source_b = Constant(0)
+        f_source_c = Constant(0)
+
         # create ions
         ion_a = {'D_sub':D_a_sub,
                  'z':z_a,
@@ -150,7 +158,8 @@ if __name__ == '__main__':
                  'g_robin_1': g_robin_a1, 'g_robin_2': g_robin_a2,
                  'bdry':bdry_a,
                  'C_sub': C_a_sub,
-                 'name':'Na'}
+                 'name':'Na',
+                 'f_source':f_source_a}
 
         ion_b = {'D_sub':D_b_sub,
                  'z':z_b,
@@ -160,7 +169,8 @@ if __name__ == '__main__':
                  'g_robin_1': g_robin_b1, 'g_robin_2': g_robin_b2,
                  'bdry':bdry_b,
                  'C_sub': C_b_sub,
-                 'name':'K'}
+                 'name':'K',
+                 'f_source':f_source_b}
 
         ion_c = {'D_sub':D_c_sub,
                  'z':z_c,
@@ -170,14 +180,16 @@ if __name__ == '__main__':
                  'g_robin_1': g_robin_c1, 'g_robin_2': g_robin_c2,
                  'bdry':bdry_c,
                  'C_sub': C_c_sub,
-                 'name':'Cl'}
+                 'name':'Cl',
+                 'f_source_c':f_source_c}
 
         # the final ion will be eliminated
         ion_list = [ion_a, ion_b, ion_c]
 
         # Set membrane parameters
         membrane_params = namedtuple('membrane_params', ('g_a_leak',
-                                     'g_b_leak', 'g_c_leak'))(g_a, g_b, g_c)
+                                     'g_b_leak', 'g_c_leak'))(g_a, \
+                                      g_b, g_c)
 
         S = Solver(params=params, ion_list=ion_list, degree_emi=degree,
                 degree_knp=degree, mms=mms)

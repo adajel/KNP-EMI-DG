@@ -12,9 +12,6 @@ V = df.FunctionSpace(mesh, 'Discontinuous Lagrange Trace', 0)
 facet_f = df.MeshFunction('size_t', mesh, mesh.topology().dim()-1, 0)
 tag = 0
 
-#stimulus = None
-
-#g_syn_bar = 5
 g_syn_bar = 0
 stimulus = {'stim_amplitude': g_syn_bar}
 
@@ -46,8 +43,6 @@ n_history = []
 m_history = []
 h_history = []
 
-#for _ in range(50000):
-#for _ in range(500):
 for _ in range(100000):
     membrane.step_lsoda(dt=0.1, stimulus=stimulus)
 
@@ -89,6 +84,10 @@ print("Na_g_init =", Na_g_history[-1, 2])
 print("n_init =", n_history[-1, 2])
 print("m_init =", m_history[-1, 2])
 print("h_init =", h_history[-1, 2])
+
+path = "results/figures/"
+if not os.path.isdir(path):
+    os.makedirs(path)
 
 fig, ax = plt.subplots(4, 1, sharex=True)
 ax[0].plot(potential_history_n[:, 2])

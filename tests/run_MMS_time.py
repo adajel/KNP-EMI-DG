@@ -7,7 +7,7 @@ parameters['ghost_mode'] = 'shared_vertex'
 
 if __name__ == '__main__':
     from mms_time import setup_mms
-    from knpemidg import Solver
+    from knpemidg import as Solver
     from collections import namedtuple
     from itertools import chain
 
@@ -60,16 +60,19 @@ if __name__ == '__main__':
         phi_M_init = Expression('(1 + x[0] + x[1]) - (1 + x[0] - x[1])', degree=4)
         phi_M_init_type = 'expression'
 
+        # set background charge (no background charge in this scenario)
+        rho_sub = {0:Constant(0), 1:Constant(0), 2:Constant(0)}
+
         # Make some parameters up
         params = namedtuple('params', (
         'D_a1', 'D_a2', 'D_b1', 'D_b2', 'D_c1', 'D_c2', \
         'C_a1', 'C_a2', 'C_b1', 'C_b2', 'C_c1', 'C_c2', 'C_phi', \
         'z_a', 'z_b', 'z_c', 'dt', 'F', 'C_M', 'phi_M_init',\
-        'R', 'temperature', 't', 'phi_M_init_type'))(D_a1, D_a2, D_b1, D_b2, D_c1, D_c2,\
+        'R', 'temperature', 't', 'phi_M_init_type', 'rho_sub'))(D_a1, D_a2, D_b1, D_b2, D_c1, D_c2,\
                                   C_a1, C_a2, C_b1, C_b2, C_c1, C_c2,\
                                   C_M/dt, \
                                   z_a, z_b, z_c, dt, F, C_M, phi_M_init, \
-                                  R, temperature, t, phi_M_init_type)
+                                  R, temperature, t, phi_M_init_type, rho_sub)
 
         mms = setup_mms(params, t, mesh)
 
@@ -140,6 +143,11 @@ if __name__ == '__main__':
         c_init_sub = {1:cc1_init, 0:cc2_init}
         c_init_sub_type = 'expression'
 
+        # set source terms to be zero for all ion species
+        f_source_a = Constant(0)
+        f_source_b = Constant(0)
+        f_source_c = Constant(0)
+
         # create ions
         ion_a = {'D_sub':D_a_sub,
                  'z':z_a,
@@ -149,7 +157,8 @@ if __name__ == '__main__':
                  'g_robin_1': g_robin_a1, 'g_robin_2': g_robin_a2,
                  'bdry':bdry_a,
                  'C_sub': C_a_sub,
-                 'name':'Na'}
+                 'name':'Na',
+                 'f_source': f_source_a}
 
         ion_b = {'D_sub':D_b_sub,
                  'z':z_b,
@@ -159,7 +168,8 @@ if __name__ == '__main__':
                  'g_robin_1': g_robin_b1, 'g_robin_2': g_robin_b2,
                  'bdry':bdry_b,
                  'C_sub': C_b_sub,
-                 'name':'K'}
+                 'name':'K',
+                 'f_source': f_source_b}
 
         ion_c = {'D_sub':D_c_sub,
                  'z':z_c,
@@ -169,7 +179,8 @@ if __name__ == '__main__':
                  'g_robin_1': g_robin_c1, 'g_robin_2': g_robin_c2,
                  'bdry':bdry_c,
                  'C_sub': C_c_sub,
-                 'name':'Cl'}
+                 'name':'Cl',
+                 'f_source': f_source_c}
 
         ion_list = [ion_a, ion_b, ion_c]
 

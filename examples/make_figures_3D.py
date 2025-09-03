@@ -294,8 +294,10 @@ if not os.path.isdir('results/figures'):
     os.mkdir('results/figures')
 
 # create figures
-res_3D = '1' # mesh resolution for 3D axon bundle
+#res_3D = '1' # mesh resolution for 3D axon bundle
+res_3D = '0' # mesh resolution for 3D axon bundle
 dt = 1.0e-4
-T = 3.0e-1
+#T = 3.0e-1
+T = 2.0e-2
 
 plot_3D_concentration(res_3D, T, dt)

@@ -25,12 +25,14 @@ Then call
 conda activate KNP-EMI
 ```
 
-### Reproduce results paper
+To install package run
+```bash
+python3 -m pip install -e .
+```
+
+### Reproduce results from Ellingsrud, Ada J., Pietro Benedusi, and Miroslav Kuchta. "A splitting, discontinuous Galerkin solver for the cell-by-cell electroneutral Nernst–Planck framework." SIAM Journal on Scientific Computing 47.2 (2025): B477-B504.
 
 ```bash
-
-# install package
-python3 -m pip install -e .
 
 # run MMS test in space
 python3 tests/run_MMS_space.py
@@ -48,6 +50,19 @@ python3 examples/run_3D.py
 python3 examples/run_rat_neuron.py
 
 ```
+
+### EMIx simulation
+The directory EMIx_simulations contains an example where the DG code is used to
+run an electrodiffusive simulation on realistic 3D geometries from the
+EMIx-meshes.
+
+The initial conditions for the PDE/ODE KNP-EMI system are calibrated by solving
+an extended system of ODEs - see 
+
+- mm_two_tags_calibration_ODE.py, and
+- run_calibration_two_cells_ODE.py
+
+for further details. The system is stimulated by an ECS injection of potassium.
 
 ### Files
 
