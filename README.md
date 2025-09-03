@@ -25,6 +25,8 @@ Then call
 conda activate KNP-EMI
 ```
 
+### Installation
+
 To install package run
 ```bash
 python3 -m pip install -e .
