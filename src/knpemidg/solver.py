@@ -107,8 +107,6 @@ class Solver:
 
         # DG penalty parameters
         self.gdim = self.mesh.geometry().dim()
-        #self.tau_emi = Constant(100*self.gdim*self.degree_emi)
-        #self.tau_knp = Constant(100*self.gdim*self.degree_knp)
         self.tau_emi = Constant(20*self.gdim*self.degree_emi)
         self.tau_knp = Constant(20*self.gdim*self.degree_knp)
 
@@ -146,6 +144,8 @@ class Solver:
             D = self.make_global(ion['D_sub'])
             ion['D'] = D
 
+            self.rho = self.make_global(params.rho_sub)
+
             # define global coupling coefficient (for MMS case, for each ion)
             if self.mms is not None:
                 C = self.make_global(ion['C_sub'])
@@ -175,8 +175,6 @@ class Solver:
         # function for previous solution concentrations in Picard iteration
         self.c_prev_k = Function(self.V_knp)
 
-        ion_list = self.ion_list
-
         # set initial conditions concentrations
         for idx, ion in enumerate(self.ion_list):
 
@@ -188,16 +186,16 @@ class Solver:
                 else:
                     c_init = self.make_global_expression(ion['c_init_sub'])
 
-                if idx == len(ion_list) - 1:
+                if idx == len(self.ion_list) - 1:
                     # set initial concentrations for eliminated ion
-                    ion_list[-1]['c'] = interpolate(c_init, self.V_knp.sub(self.N_ions - 1).collapse())
+                    self.ion_list[-1]['c'] = interpolate(c_init, self.V_knp.sub(self.N_ions - 1).collapse())
                 else:
                     assign(self.c_prev_n.sub(idx), interpolate(c_init, self.V_knp.sub(idx).collapse()))
                     assign(self.c_prev_k.sub(idx), interpolate(c_init, self.V_knp.sub(idx).collapse()))
             # if initial conditions are functions
             elif ion['c_init_sub_type'] == 'function':
-                if idx == len(ion_list) - 1:
-                    ion_list[-1]['c'] = interpolate(ion['c_init_sub'], self.V_knp.sub(self.N_ions - 1).collapse())
+                if idx == len(self.ion_list) - 1:
+                    self.ion_list[-1]['c'] = interpolate(ion['c_init_sub'], self.V_knp.sub(self.N_ions - 1).collapse())
                 else:
                     assign(self.c_prev_n.sub(idx), ion['c_init_sub'])
                     assign(self.c_prev_k.sub(idx), ion['c_init_sub'])
@@ -220,8 +218,8 @@ class Solver:
             self.phi_M_prev_PDE = self.params.phi_M_init
         else:
             print(f"""Type of initial condition \"{ion['c_init_sub_type']}\" not
-                    recognized - please spesify whether initial condition is
-                    \"constant\", \"expression\" or \"function\" """)
+                recognized - please spesify whether initial condition is
+                \"constant\", \"expression\" or \"function\" """)
             sys.exit(0)
 
         #self.phi_M_prev_PDE = self.params.phi_M_init
@@ -277,7 +275,6 @@ class Solver:
         dx = self.dx; ds = self.ds; dS = self.dS     # measures
         hA = self.hA_emi; n = self.n; n_g = self.n_g # facet area and normal
         tau_emi = self.tau_emi                       # penalty parameter
-        ion_list = self.ion_list                     # ion_list
         C_phi = self.C_phi; F = self.F               # physical parameters
         psi = self.psi; C_M = self.C_M               # physical parameters
         R = self.R; temperature = self.temperature   # physical parameters
@@ -291,11 +288,11 @@ class Solver:
         a = 0; L = 0                         # rhs and lhs forms
         self.alpha_sum = 0                   # sum of fractions intracellular
 
-        for idx, ion in enumerate(ion_list):
+        for idx, ion in enumerate(self.ion_list):
 
-            if idx == len(ion_list) - 1:
+            if idx == len(self.ion_list) - 1:
                 # get eliminated concentrations from previous global step
-                c_k_ = ion_list[-1]['c']
+                c_k_ = self.ion_list[-1]['c']
             else:
                 # get concentrations from previous global step
                 c_k_ = split(self.c_prev_k)[idx]
@@ -374,7 +371,7 @@ class Solver:
             L += sum(inner(g_flux_cont[tag], plus(v_phi, n_g)) * dS(tag) for tag in lm_tags)
 
             # Neumann
-            for idx, ion in enumerate(ion_list):
+            for idx, ion in enumerate(self.ion_list):
                 # MMS specific: add neumann boundary terms (not zero in MMS case)
                 L += - F * ion['z'] * dot(ion['bdry'], n) * v_phi * ds
 
@@ -436,9 +433,6 @@ class Solver:
             opts.setValue('ksp_initial_guess_nonzero', 1)
             opts.setValue('ksp_view', None)
             opts.setValue('pc_type', 'hypre')
-
-            opts.setValue('ksp_converged_reason', None)
-            opts.setValue('ksp_monitor', None)
 
             # set tolerances
             opts.setValue('ksp_rtol', self.rtol_emi)
@@ -545,7 +539,6 @@ class Solver:
         dx = self.dx; ds = self.ds; dS = self.dS    # measures
         n = self.n; hA = self.hA_knp; n_g = self.n_g    # facet area and normal
         tau_knp = self.tau_knp                      # penalty parameter
-        ion_list = self.ion_list                    # ion list
         psi = self.psi; C_phi = self.C_phi          # physical parameters
         C_M = self.C_M; F = self.F                  # physical parameters
         phi = self.phi                              # potential
@@ -556,7 +549,7 @@ class Solver:
         # initialize form
         a = 0; L = 0
 
-        for idx, ion in enumerate(ion_list[:-1]):
+        for idx, ion in enumerate(self.ion_list[:-1]):
             # get trial and test functions
             u_c = us[idx]
             v_c = vs[idx]
@@ -604,6 +597,8 @@ class Solver:
 
             # add terms for approximating time derivative
             L += 1.0/self.dt * c_n_ * v_c * dx
+            # add src terms for ion injection ECS
+            L += ion['f_source'] * v_c * dx(0)
 
             if self.mms is None:
                 # calculate alpha
@@ -697,9 +692,6 @@ class Solver:
             opts.setValue("ksp_initial_guess_nonzero", 1)
             opts.setValue("ksp_view", None)
             opts.setValue("ksp_monitor_true_residual", None)
-
-            opts.setValue('ksp_converged_reason', None)
-            opts.setValue('ksp_monitor', None)
 
             opts.setValue('ksp_rtol', self.rtol_knp)
             opts.setValue('ksp_atol', self.atol_knp)
@@ -833,10 +825,8 @@ class Solver:
         # variable for eliminated ion concentration
         c_elim = 0
 
-        ion_list = self.ion_list
-
         # update Nernst potentials for next global time level
-        for idx, ion in enumerate(ion_list[:-1]):
+        for idx, ion in enumerate(self.ion_list[:-1]):
             # get current solution concentration
             c_k_ = split(self.c_prev_k)[idx]
             # update Nernst potential
@@ -844,15 +834,18 @@ class Solver:
             ion['E'].assign(pcws_constant_project(E, self.Q))
 
             # add ion specific contribution to eliminated ion concentration
-            c_elim += - (1.0 / ion_list[-1]['z']) * ion['z'] * c_k_
+            c_elim += - (1.0 / self.ion_list[-1]['z']) * ion['z'] * c_k_
+
+        # add contribution from background charge / immobile ions
+        c_elim += - (1.0 / self.ion_list[-1]['z']) * self.rho
 
         # update eliminated ion concentration
         self.ion_list[-1]['c'].assign(project(c_elim, \
                 self.V_knp.sub(self.N_ions - 1).collapse()))
 
         # update Nernst potential for eliminated ion
-        E = R * temperature / (F * ion_list[-1]['z']) * ln(plus(ion_list[-1]['c'], self.n_g) / minus(ion_list[-1]['c'], self.n_g))
-        ion_list[-1]['E'].assign(pcws_constant_project(E, self.Q))
+        E = R * temperature / (F * self.ion_list[-1]['z']) * ln(plus(self.ion_list[-1]['c'], self.n_g) / minus(self.ion_list[-1]['c'], self.n_g))
+        self.ion_list[-1]['E'].assign(pcws_constant_project(E, self.Q))
 
         # update time
         t.assign(float(t + self.dt))
@@ -900,10 +893,8 @@ class Solver:
 
             c_elim = 0
 
-            ion_list = self.ion_list
-
             # update Nernst potentials for next Picard level
-            for idx, ion in enumerate(ion_list[:-1]):
+            for idx, ion in enumerate(self.ion_list[:-1]):
                 # get current solution concentration
                 c_k_ = split(self.c_prev_k)[idx]
                 # update Nernst potential
@@ -911,15 +902,18 @@ class Solver:
                 ion['E'].assign(pcws_constant_project(E, self.Q))
 
                 # add ion specific contribution to eliminated ion concentration
-                c_elim += - (1.0 / ion_list[-1]['z']) * ion['z'] * c_k_
+                c_elim += - (1.0 / self.ion_list[-1]['z']) * ion['z'] * c_k_
+
+            # add contribution from background charge / immobile ions
+            c_elim += - (1.0 / self.ion_list[-1]['z']) * self.rho
 
             # update eliminated ion concentration for next Picard level
-            ion_list[-1]['c'].assign(project(c_elim, \
+            self.ion_list[-1]['c'].assign(project(c_elim, \
             self.V_knp.sub(self.N_ions - 1).collapse()))
 
             # update Nernst potential for eliminated ion
-            E = R * temperature / (F * ion_list[-1]['z']) * ln(plus(ion_list[-1]['c'], self.n_g) / minus(ion_list[-1]['c'], self.n_g))
-            ion_list[-1]['E'].assign(pcws_constant_project(E, self.Q))
+            E = R * temperature / (F * self.ion_list[-1]['z']) * ln(plus(self.ion_list[-1]['c'], self.n_g) / minus(self.ion_list[-1]['c'], self.n_g))
+            self.ion_list[-1]['E'].assign(pcws_constant_project(E, self.Q))
 
             # exit if iteration exceeds maximum number of iterations
             if iter > max_iter:
@@ -997,7 +991,7 @@ class Solver:
 
             # Save results
             if (k % self.sf) == 0 and filename is not None:
-                self.save_h5()      # fields
+                self.save_h5()              # fields
                 #self.save_solver(k/self.sf) # solver statistics
 
         # Close files
@@ -1013,14 +1007,6 @@ class Solver:
 
     def solve_system_active(self, Tstop, t, solver_params, filename=None):
         """ Solve system with active membrane mechanisms (ODEs) """
-
-        # TODO
-        #--------------------------------
-        #m = Function(self.Q)
-        #h = Function(self.Q)
-        #n = Function(self.Q)
-        #VM = Function(self.Q)
-        #--------------------------------
 
         # Setup solver and parameters
         self.solver_params = solver_params               # parameters for solvers
@@ -1089,17 +1075,12 @@ class Solver:
                     # previous PDEs step)
                     ode_model.set_membrane_potential(self.phi_M_prev_PDE)
 
-                # Update parameters in ODE solver (based on previous PDEs step)
-                ode_model.set_parameter('E_K', self.ion_list[0]['E'])
-                ode_model.set_parameter('E_Na', self.ion_list[2]['E'])
+                # Update Nernst potential in ODE solver (based on previous PDEs step)
+                for i, ion in enumerate(self.ion_list):
+                    ode_model.set_parameter(f"E_{ion['name']}", ion['E'])
 
-                # set extracellular trace of K concentration at membrane
-                K_e = plus(self.c_prev_k.split()[0], self.n_g)
-                ode_model.set_parameter('K_e', pcws_constant_project(K_e, self.Q))
-
-                # set intracellular trace of Na concentration at membrane
-                Na_i = minus(self.ion_list[-1]['c'], self.n_g)
-                ode_model.set_parameter('Na_i', pcws_constant_project(Na_i, self.Q))
+                # Update parameters in ODE solver (based on previous PDEs step) specific to membrane model
+                self.update_ode(ode_model)
 
                 # Solve ODEs
                 ode_model.step_lsoda(dt=dt_ode, \
@@ -1112,45 +1093,6 @@ class Solver:
                 for ion, I_ch_k in mem_model['I_ch_k'].items():
                     # update src term for each ion species
                     ode_model.get_parameter("I_ch_" + ion, I_ch_k)
-
-                """
-                # TODO
-                # ---------------------------------------"
-                x = 8e-4
-                y = 0.2e-4
-                z = 0.5e-4
-                x_min = x - 0.5e-4; x_max = x + 0.1e-4
-                y_min = y - 0.5e-4; y_max = y + 0.1e-4
-                z_min = z; z_max = z + 0.04e-4
-
-                # define one facet to 10 for getting membrane potential
-                for facet in facets(self.mesh):
-                    x = [facet.midpoint().x(), facet.midpoint().y(), facet.midpoint().z()]
-                    point_1 = y_min <= x[1] <= y_max \
-                          and x_min <= x[0] <= x_max \
-                          and z_min <= x[2] <= z_max
-                    if point_1 and (self.surfaces[facet] == 1 or self.surfaces[facet] == 2):
-                        print(x[0], x[1], x[2])
-                        self.surfaces[facet] = 10
-
-                dS1 = Measure('dS', domain=self.mesh, subdomain_data=self.surfaces)
-
-                iface_size = assemble(Constant(1)*dS1(10))
-                if mem_model['ode'].tag == 1:
-                    print("tag", mem_model['ode'].tag)
-                    ode_model.get_state("m", m)
-                    ode_model.get_state("n", n)
-                    ode_model.get_state("h", h)
-                    ode_model.get_state("V", VM)
-                    print("--------------------------")
-                    print("GATING:")
-                    print("m", assemble(1.0/iface_size*avg(m)*dS1(10)))
-                    print("n", assemble(1.0/iface_size*avg(n)*dS1(10)))
-                    print("h", assemble(1.0/iface_size*avg(h)*dS1(10)))
-                    print("V", assemble(1.0/iface_size*avg(VM)*dS1(10)))
-                    print("--------------------------")
-                # ---------------------------------------"
-                """
 
             # End timer (ODE solve)
             te = time.perf_counter()
@@ -1173,7 +1115,17 @@ class Solver:
 
         return
 
+    def update_ode(self, ode_model):
+        """ Update parameters in ODE solver (based on previous PDEs step)
+            specific to membrane model
 
+            This method must be tailored to the specific membrane model and is
+            meant to be implemented by subclasses.
+        """
+
+        raise NotImplementedError("Subclasses must implement the 'update_ode' function.")
+
+        return
 
     def initialize_solver_savefile(self, path_timings):
         """ write CPU timings (solve and assemble), condition number and number of
@@ -1190,11 +1142,6 @@ class Solver:
         num_cells = self.mesh.num_cells()
         dofs_emi = self.V_emi.dim()
         dofs_knp = self.V_knp.dim()
-
-        print("--------------------------")
-        print("dofs_knp:", dofs_knp)
-        print("dofs_emi:", dofs_emi)
-        print("--------------------------")
 
         if self.direct_emi:
             self.file_emi_solve = open(path_timings + "emi_solve_dir_%d.txt" % reso, "w")
@@ -1230,32 +1177,45 @@ class Solver:
         self.file_knp_assem.write("num cells: %d \n" % num_cells)
         self.file_knp_assem.write("dofs: %d \n" % dofs_knp)
 
-        # open files for saving bulk results
-        #self.f_pot = XDMFFile(self.filename + 'pvd/pot.xdmf')
-        #self.f_Na = XDMFFile(self.filename + 'pvd/Na.xdmf')
-        #self.f_K = XDMFFile(self.filename + 'pvd/K.xdmf')
-        #self.f_Cl = XDMFFile(self.filename + 'pvd/Cl.xdmf')
+        # create file for saving electrical potential
+        self.f_pot = XDMFFile(self.filename + 'pvd/pot.xdmf')
+
+        # create files for saving ion concentrations
+        self.ion_files = []
+        for ion in self.ion_list:
+            self.ion_files.append(XDMFFile(self.filename + f"pvd/{ion['name']}.xdmf"))
 
         return
 
     def save_solver(self, k):
-            # just for debugging
-            phi = self.phi
+        # just for debugging
+        VDG1 = FunctionSpace(self.mesh, "DG", 1)
 
-            VDG1 = VectorFunctionSpace(self.mesh, "DG", 0)
-            VDG0 = FunctionSpace(self.mesh, "DG", 0)
+        # write electrical potential to file
+        phi_ = interpolate(self.phi, VDG1)
+        self.f_pot.write_checkpoint(phi_, "phi", time_step=k, append=True)
 
-            phi_ = project(grad(phi), VDG1)
-            K_ = project(self.c.split()[0], VDG0)
-            Cl_ = project(self.c.split()[1], VDG0)
-            Na_ = project(self.ion_list[-1]['c'], VDG0)
+        # write ion concentrations to file (except last ion in list which is handled below
+        for i, ion in enumerate(self.ion_list[:-1]):
+            ion_ = interpolate(self.c.split()[i], VDG1)
+            self.ion_files[i].write_checkpoint(ion_, f"{ion['name']}_", time_step=k, append=True)
 
-            self.f_pot.write_checkpoint(phi_, "phi", time_step=k, append=True)
-            self.f_Na.write_checkpoint(Na_, "Na_", time_step=k, append=True)
-            self.f_K.write_checkpoint(K_, "K_", time_step=k, append=True)
-            self.f_Cl.write_checkpoint(Cl_, "Cl_", time_step=k, append=True)
+        # last ion in list is not solved for (is eliminated) and must thus be handled differently
+        elim_ion_ = interpolate(self.ion_list[-1]['c'], VDG1)
+        self.ion_files[-1].write_checkpoint(elim_ion_, f"{self.ion_list[-1]['name']}_", time_step=k, append=True)
 
-            return
+        #K_ = interpolate(self.c.split()[0], VDG1)
+        # TODO
+        #Cl_ = interpolate(self.c.split()[1], VDG1)
+        #Na_ = interpolate(self.ion_list[-1]['c'], VDG1)
+        #Na_ = interpolate(self.c.split()[1], VDG1)
+        #Cl_ = interpolate(self.ion_list[-1]['c'], VDG1)
+
+        #self.f_Na.write_checkpoint(Na_, "Na_", time_step=k, append=True)
+        #self.f_K.write_checkpoint(K_, "K_", time_step=k, append=True)
+        #self.f_Cl.write_checkpoint(Cl_, "Cl_", time_step=k, append=True)
+
+        return
 
     def close_save_solver(self):
 
@@ -1269,10 +1229,11 @@ class Solver:
         self.file_emi_assem.close()
         self.file_knp_assem.close()
 
-        #self.f_pot.close()
-        #self.f_Na.close()
-        #self.f_K.close()
-        #self.f_Cl.close()
+        # close files
+        self.f_pot.close()
+
+        for ion_file in self.ion_files:
+            ion_file.close()
 
         return
 
