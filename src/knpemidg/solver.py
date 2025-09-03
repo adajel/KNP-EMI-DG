@@ -222,8 +222,6 @@ class Solver:
                 \"constant\", \"expression\" or \"function\" """)
             sys.exit(0)
 
-        #self.phi_M_prev_PDE = self.params.phi_M_init
-
         return
 
 
@@ -737,10 +735,6 @@ class Solver:
         bb_knp = self.bb_knp.vec()
         x_knp = self.x_knp
 
-        # solution vector
-        #x_knp *= 0.
-        #x_knp.axpy(1, as_backend_type(self.c.vector()).vec())
-
         # timer end
         te = time.perf_counter()
         res = te - ts
@@ -971,9 +965,9 @@ class Solver:
         # Initialize save results
         if filename is not None:
             # file for solutions to equations
-            self.initialize_h5_savefile(filename + 'results.h5')
+            self.init_h5_savefile(filename + 'results.h5')
             # file for CPU timings, number of iterations etc.
-            self.initialize_solver_savefile(filename + 'solver/')
+            self.init_solver_statistics(filename + 'solver/')
 
         # Solve system (PDEs and ODEs)
         for k in range(int(round(Tstop/float(self.dt)))):
@@ -992,12 +986,11 @@ class Solver:
             # Save results
             if (k % self.sf) == 0 and filename is not None:
                 self.save_h5()              # fields
-                #self.save_solver(k/self.sf) # solver statistics
 
         # Close files
         if filename is not None:
             self.close_h5()
-            self.close_save_solver()
+            self.close_solver_statistics()
 
         # combine solution for the potential and concentrations
         uh = split(self.c) + (self.phi,)
@@ -1046,9 +1039,9 @@ class Solver:
         # Initialize save results
         if filename is not None:
             # file for solutions to equations
-            self.initialize_h5_savefile(filename + 'results.h5')
+            self.init_h5_savefile(filename + 'results.h5')
             # file for CPU timings, number of iterations etc.
-            self.initialize_solver_savefile(filename + 'solver/')
+            self.init_solver_statistics(filename + 'solver/')
 
         # Solve system (PDEs and ODEs)
         for k in range(int(round(Tstop/float(self.dt)))):
@@ -1101,17 +1094,17 @@ class Solver:
 
             # Solve PDEs
             self.solve_for_time_step(k, t)
+            # Solve PDEs with picard iteration
             #self.solve_for_time_step_picard(k, t)
 
             # Save results
             if (k % self.sf) == 0 and filename is not None:
                 self.save_h5()              # fields
-                #self.save_solver(k/self.sf) # solver statistics
 
         # Close files
         if filename is not None:
             self.close_h5()
-            self.close_save_solver()
+            self.close_solver_statistics()
 
         return
 
@@ -1127,7 +1120,7 @@ class Solver:
 
         return
 
-    def initialize_solver_savefile(self, path_timings):
+    def init_solver_statistics(self, path_timings):
         """ write CPU timings (solve and assemble), condition number and number of
             iterations to file """
 
@@ -1135,7 +1128,6 @@ class Solver:
         if not os.path.exists(path_timings):
             os.mkdir(path_timings)
 
-        #path_timings = "results/it_count_2D/"
         reso = self.solver_params.resolution
 
         # get number of mesh cells, number of dofs emi, number of dofs knp
@@ -1177,68 +1169,21 @@ class Solver:
         self.file_knp_assem.write("num cells: %d \n" % num_cells)
         self.file_knp_assem.write("dofs: %d \n" % dofs_knp)
 
-        # create file for saving electrical potential
-        self.f_pot = XDMFFile(self.filename + 'pvd/pot.xdmf')
-
-        # create files for saving ion concentrations
-        self.ion_files = []
-        for ion in self.ion_list:
-            self.ion_files.append(XDMFFile(self.filename + f"pvd/{ion['name']}.xdmf"))
-
-        return
-
-    def save_solver(self, k):
-        # just for debugging
-        VDG1 = FunctionSpace(self.mesh, "DG", 1)
-
-        # write electrical potential to file
-        phi_ = interpolate(self.phi, VDG1)
-        self.f_pot.write_checkpoint(phi_, "phi", time_step=k, append=True)
-
-        # write ion concentrations to file (except last ion in list which is handled below
-        for i, ion in enumerate(self.ion_list[:-1]):
-            ion_ = interpolate(self.c.split()[i], VDG1)
-            self.ion_files[i].write_checkpoint(ion_, f"{ion['name']}_", time_step=k, append=True)
-
-        # last ion in list is not solved for (is eliminated) and must thus be handled differently
-        elim_ion_ = interpolate(self.ion_list[-1]['c'], VDG1)
-        self.ion_files[-1].write_checkpoint(elim_ion_, f"{self.ion_list[-1]['name']}_", time_step=k, append=True)
-
-        #K_ = interpolate(self.c.split()[0], VDG1)
-        # TODO
-        #Cl_ = interpolate(self.c.split()[1], VDG1)
-        #Na_ = interpolate(self.ion_list[-1]['c'], VDG1)
-        #Na_ = interpolate(self.c.split()[1], VDG1)
-        #Cl_ = interpolate(self.ion_list[-1]['c'], VDG1)
-
-        #self.f_Na.write_checkpoint(Na_, "Na_", time_step=k, append=True)
-        #self.f_K.write_checkpoint(K_, "K_", time_step=k, append=True)
-        #self.f_Cl.write_checkpoint(Cl_, "Cl_", time_step=k, append=True)
-
-        return
-
-    def close_save_solver(self):
+    def close_solver_statistics(self):
 
         if not self.direct_emi:
             self.file_emi_niter.close()
             self.file_knp_niter.close()
 
-        #self.file_phi_M_1.close()
         self.file_emi_solve.close()
         self.file_knp_solve.close()
         self.file_emi_assem.close()
         self.file_knp_assem.close()
 
-        # close files
-        self.f_pot.close()
-
-        for ion_file in self.ion_files:
-            ion_file.close()
-
         return
 
 
-    def initialize_h5_savefile(self, filename):
+    def init_h5_savefile(self, filename):
         """ initialize h5 file """
         self.h5_idx = 0
         self.h5_file = HDF5File(self.mesh.mpi_comm(), filename, 'w')
