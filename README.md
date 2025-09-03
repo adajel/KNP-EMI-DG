@@ -32,9 +32,7 @@ To install package run
 python3 -m pip install -e .
 ```
 
-### Reproduce results from Ellingsrud et al [A splitting, discontinuous
-Galerkin solver for the cell-by-cell electroneutral Nernst–Planck
-framework](https://doi.org/10.1137/24M1653367)
+### Reproduce results from Ellingsrud et al [A splitting, discontinuous Galerkin solver for the cell-by-cell electroneutral Nernst–Planck framework](https://doi.org/10.1137/24M1653367)
 
 ```bash
 
