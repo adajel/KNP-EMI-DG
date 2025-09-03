@@ -4,7 +4,7 @@
 
 Code for solving the KNP--EMI problem using a DG fem method.
 
-### Dependencies code
+### Dependencies
 
 All dependencies are listed in [environment.yml](./environment.yml).
 To create an environment with these dependencies use either `conda` or `mamba` and run
@@ -32,7 +32,9 @@ To install package run
 python3 -m pip install -e .
 ```
 
-### Reproduce results from Ellingsrud, Ada J., Pietro Benedusi, and Miroslav Kuchta. "A splitting, discontinuous Galerkin solver for the cell-by-cell electroneutral Nernst–Planck framework." SIAM Journal on Scientific Computing 47.2 (2025): B477-B504.
+### Reproduce results from Ellingsrud et al [A splitting, discontinuous
+Galerkin solver for the cell-by-cell electroneutral Nernst–Planck
+framework](https://doi.org/10.1137/24M1653367)
 
 ```bash
 
