@@ -32,7 +32,7 @@ To install package run
 python3 -m pip install -e .
 ```
 
-### Reproduce results from Ellingsrud et al [A splitting, discontinuous Galerkin solver for the cell-by-cell electroneutral Nernst–Planck framework](https://doi.org/10.1137/24M1653367)
+### Reproduce results from [A splitting, discontinuous Galerkin solver for the cell-by-cell electroneutral Nernst–Planck framework](https://doi.org/10.1137/24M1653367)
 
 ```bash
 
@@ -54,9 +54,9 @@ python3 examples/run_rat_neuron.py
 ```
 
 ### EMIx simulation
-The directory EMIx_simulations contains an example where the DG code is used to
-run an electrodiffusive simulation on realistic 3D geometries from the
-EMIx-meshes.
+The directory emix-simulations contains an example where the KNP-EMI DG code is
+used to run an electrodiffusive simulation on realistic 3D geometries generated
+via the EMIx meshing pipeline.
 
 The initial conditions for the PDE/ODE KNP-EMI system are calibrated by solving
 an extended system of ODEs - see 
@@ -68,7 +68,7 @@ for further details. The system is stimulated by an ECS injection of potassium.
 
 ### Files
 
-- [solver.py](./src/solver.py): class for PDE solver.
+- [solver.py](./src/knpemi/solver.py): class for PDE solver.
 
 - [membrane.py](./src/membrane.py): class for membrane model (ODE stepping, functions for communication
   between PDE and ODE solver etc.).
