@@ -2,7 +2,10 @@
 
 ### About
 
-Code for solving the KNP--EMI problem using a DG fem method.
+Code for solving the KNP--EMI problem using a DG fem method. The numerical
+strategy is described in Ellingsrud, Benedusi, and Kuchta. *A splitting, discontinuous Galerkin solver for the cell-by-cell
+electroneutral Nernst–Planck framework.* SIAM Journal on Scientific Computing
+47.2 (2025): B477-B504. [DOI:10.1137/24M1653367](https://doi.org/10.1137/24M1653367)
 
 ### Dependencies
 
@@ -32,7 +35,7 @@ To install package run
 python3 -m pip install -e .
 ```
 
-### Reproduce results from [A splitting, discontinuous Galerkin solver for the cell-by-cell electroneutral Nernst–Planck framework](https://doi.org/10.1137/24M1653367)
+### Reproduce results from paper
 
 ```bash
 
