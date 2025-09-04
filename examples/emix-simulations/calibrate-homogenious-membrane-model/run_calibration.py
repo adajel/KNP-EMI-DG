@@ -6,6 +6,10 @@ import mm_callibration as ode
 from knpemidg.membrane import MembraneModel
 from collections import namedtuple
 
+# Solve ODE model defined in mm_callibration.py to obtain a steady state
+# solution that will be used as initila conditions in the full KNP-EMI
+# (PDE/ODE) system
+
 mesh = df.UnitSquareMesh(2, 2)
 V = df.FunctionSpace(mesh, 'Discontinuous Lagrange Trace', 0)
 

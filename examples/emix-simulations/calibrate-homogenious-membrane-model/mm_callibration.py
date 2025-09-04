@@ -1,4 +1,12 @@
-# Gotran generated code for the "hodgkin_huxley_squid_axon_model_1952_original" model
+# We here define an extended membrane ODE system where we have:
+#
+# 1) Hodgkin Huxley ODES + leak for neuron (as defined in mm_hh)
+# 2) Glial mechanism (as defined mm_glial.py)
+# 3) ODEs to keep track of concentrations
+#
+# The system is solved until the system reached a steady state which is used to
+# set the initial condition for the membrane variables and concentration in the
+# full KNP-EMI (PDE/ODE) system.
 
 import numpy as np
 import math
@@ -45,7 +53,7 @@ def init_parameter_values(**values):
     Initialize parameter values
     """
 
-    # Membrane parameters
+    # Membrane parameters (as defined in mm_hh.py and mm_glial.py)
     g_Na_bar = 120         # Na max conductivity (mS/cm**2)
     g_K_bar = 36           # K max conductivity (mS/cm**2)
     g_leak_Na_n = 0.1      # Na leak conductivity (mS/cm**2)
@@ -139,18 +147,6 @@ def rhs_numba(t, states, values, parameters):
         hodgkin_huxley_squid_axon_model_1952_original ODE
     """
 
-    # Assign states
-    #assert(len(states)) == 4
-
-    # Assign parameters
-    #assert(len(parameters)) == 11
-
-    # # Init return args
-    # if values is None:
-    #     values = np.zeros((4,), dtype=np.float_)
-    # else:
-    #     assert isinstance(values, np.ndarray) and values.shape == (4,)
-
     # Physical parameters (PDEs)
     temperature = 300e3            # temperature (m K)
     R = 8.314e3                    # Gas Constant (m J/(K mol))
@@ -235,6 +231,8 @@ def rhs_numba(t, states, values, parameters):
 
     # Expression for phi_M_g
     values[4] = (- i_K_g - i_Na_g)/parameters[6]
+
+    ### Extension to calculate ECS and ICS ion concentrations ###
 
     # Expression for K_e
     values[5] = i_K_n * surface / (F * ECS_vol) \
