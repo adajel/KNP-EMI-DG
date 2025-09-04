@@ -202,5 +202,5 @@ if __name__ == "__main__":
         S.setup_FEM_spaces()                            # setup function spaces and numerical parameters
         S.setup_membrane_model(stim_params, ode_models) # setup membrane model(s)
         S.solve_system_active(Tstop, t, solver_params,
-                filename=fname, save_fields=True, save_solver_stats=True) # solve
+            filename=fname, save_fields=True, save_solver_stats=True) # solve
 
