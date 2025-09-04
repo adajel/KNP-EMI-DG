@@ -3,9 +3,9 @@
 ### About
 
 Code for solving the KNP--EMI problem using a DG fem method. The numerical
-method is described in Ellingsrud, Benedusi, and Kuchta. [A splitting, discontinuous Galerkin solver for the cell-by-cell
-electroneutral Nernst–Planck framework.](https://doi.org/10.1137/24M1653367) SIAM Journal on Scientific Computing
-47.2 (2025): B477-B504.
+method is described in: [Ellingsrud, Benedusi, and Kuchta. A splitting, discontinuous Galerkin solver for the cell-by-cell
+electroneutral Nernst–Planck framework.SIAM Journal on Scientific Computing
+47.2 (2025): B477-B504.](https://doi.org/10.1137/24M1653367)
 
 ### Dependencies
 
