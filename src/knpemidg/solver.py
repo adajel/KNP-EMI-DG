@@ -28,8 +28,8 @@ class bcolors:
     UNDERLINE = '\033[4m'
 
 # We here approximate the following system:
-#     d(c_k)/dt + div(J_k) = 0, (emi)
-#   - F sum_k z^k div(J_k) = 0, (knp)
+#     d(c_k)/dt + div(J_k) = 0, (knp)
+#   - F sum_k z^k div(J_k) = 0, (emi)
 #   where
 #   J_k(c_k, phi) = - D grad(c_k) - z_k D_k psi c_k grad(phi)
 #
@@ -231,7 +231,7 @@ class Solver:
         dynamics / ODEs) and src terms for PDE system
         """
 
-        # set stimulus parameters
+        # set membrane (ODE) stimuli parameters
         self.stimulus = stim_params.stimulus                 # stimulus
         self.stimulus_locator = stim_params.stimulus_locator # locator for stimulus
 
@@ -496,7 +496,7 @@ class Solver:
         print(f"{bcolors.OKGREEN} CPU Execution time PDE assemble emi: {res:.4f} seconds {bcolors.ENDC}")
         self.emi_ass_timer += res
 
-        if self.filename is not None:
+        if self.save_solver_stats:
             self.file_emi_assem.write("ass_time: %.4f \n" % (res))
 
         if self.direct_emi:
@@ -518,10 +518,10 @@ class Solver:
             # print and write number of iterations
             niter = self.ksp_emi.getIterationNumber()
 
-            if self.filename is not None:
+            if self.save_solver_stats:
                 self.file_emi_niter.write("niter: %d \n" % niter)
 
-        if self.filename is not None:
+        if self.save_solver_stats:
             self.file_emi_solve.write("solve_time: %.4f \n" % (res))
 
         self.phi.vector().vec().array_w[:] = self.x_emi.array_r[:]
@@ -742,7 +742,7 @@ class Solver:
         self.knp_ass_timer += res
 
         # write assembly time to file
-        if self.filename is not None:
+        if self.save_solver_stats:
             self.file_knp_assem.write("ass_time: %.4f \n" % (res))
 
         if self.direct_knp:
@@ -760,7 +760,7 @@ class Solver:
             print(f"{bcolors.OKGREEN} CPU Execution time PDE solve knp: {res:.4f} seconds {bcolors.ENDC}")
             self.knp_solve_timer += res
 
-            if self.filename is not None:
+            if self.save_solver_stats:
                 self.file_knp_solve.write("solve_time: %.4f \n" % (res))
         else:
             # set operators
@@ -779,7 +779,7 @@ class Solver:
             # print and write number of iterations
             niters = self.ksp_knp.getIterationNumber()
 
-            if self.filename is not None:
+            if self.save_solver_stats:
                 self.file_knp_solve.write("solve_time: %.4f \n" % (res))
                 self.file_knp_niter.write("niter: %d \n" % niters)
 
@@ -911,7 +911,7 @@ class Solver:
 
             # exit if iteration exceeds maximum number of iterations
             if iter > max_iter:
-                print("Picard solver diverged")
+                print(f"Picard solver diverged")
                 sys.exit(2)
 
         # update previous concentrations for next global time step
@@ -927,10 +927,16 @@ class Solver:
         return
 
 
-    def solve_system_passive(self, Tstop, t, solver_params, membrane_params, filename=None):
+    def solve_system_passive(self, Tstop, t, solver_params, membrane_params,
+            filename=None, save_fields=False, save_solver_stats=False):
         """
         Solve system with passive membrane mechanisms
         """
+
+        # Set filename for saving results
+        self.filename = filename
+        self.save_fields = save_fields
+        self.save_solver_stats = save_solver_stats
 
         # Setup solver and parameters
         self.solver_params = solver_params               # parameters for solvers
@@ -951,9 +957,6 @@ class Solver:
 
         self.splitting_scheme = False                    # no splitting scheme
 
-        # Set filename for saving results
-        self.filename = filename
-
         # Setup variational formulations
         self.setup_varform_emi()
         self.setup_varform_knp()
@@ -962,12 +965,21 @@ class Solver:
         self.setup_solver_emi()
         self.setup_solver_knp()
 
-        # Initialize save results
-        if filename is not None:
-            # file for solutions to equations
+        # If user has specified that solver statistics or fields should be
+        # saved without specifying a filename raise error.
+        if filename is None and (self.save_solver_stats or self.save_fields):
+            print(f"Please specify filename when initiating \
+                   Solver.solve_system_passive() method: \n \
+                   solve_system_passive(self, Tstop, t, solver_params, membrane_params, filename=None, save_fields=False, save_solver_stats=False)")
+            sys.exit(0)
+
+        if self.save_fields:
+            # initialize file for fields (solutions to PDEs)
             self.init_h5_savefile(filename + 'results.h5')
-            # file for CPU timings, number of iterations etc.
-            self.init_solver_statistics(filename + 'solver/')
+
+        if self.save_solver_stats:
+            # initialize file for solver statistics (CPU timings, number of iterations etc)
+            self.init_solver_stats(filename + 'solver/')
 
         # Solve system (PDEs and ODEs)
         for k in range(int(round(Tstop/float(self.dt)))):
@@ -984,13 +996,14 @@ class Solver:
             #self.solve_for_time_step_picard(k, t)
 
             # Save results
-            if (k % self.sf) == 0 and filename is not None:
-                self.save_h5()              # fields
+            if (k % self.sf) == 0 and self.save_fields:
+                self.save_h5()
 
         # Close files
-        if filename is not None:
+        if self.save_fields:
             self.close_h5()
-            self.close_solver_statistics()
+        if self.save_solver_stats:
+            self.close_solver_stats()
 
         # combine solution for the potential and concentrations
         uh = split(self.c) + (self.phi,)
@@ -998,8 +1011,14 @@ class Solver:
         return uh, self.ion_list[-1]['c']
 
 
-    def solve_system_active(self, Tstop, t, solver_params, filename=None):
+    def solve_system_active(self, Tstop, t, solver_params, filename=None,
+            save_fields=False, save_solver_stats=False):
         """ Solve system with active membrane mechanisms (ODEs) """
+
+        # Set filename for saving results
+        self.filename = filename
+        self.save_fields = save_fields
+        self.save_solver_stats = save_solver_stats
 
         # Setup solver and parameters
         self.solver_params = solver_params               # parameters for solvers
@@ -1022,9 +1041,6 @@ class Solver:
 
         self.splitting_scheme = True                    # splitting scheme
 
-        # Set filename for saving results
-        self.filename = filename
-
         # Setup variational formulations
         self.setup_varform_emi()
         self.setup_varform_knp()
@@ -1036,12 +1052,21 @@ class Solver:
         # Calculate ODE time step (s)
         dt_ode = float(self.dt)
 
-        # Initialize save results
-        if filename is not None:
-            # file for solutions to equations
+        # If user has specified that solver statistics or fields should be
+        # saved without specifying a filename raise error.
+        if filename is None and (self.save_solver_stats or self.save_fields):
+            print(f"Please specify filename when initiating \
+                   Solver.solve_system_passive() method: \n \
+                   solve_system_passive(self, Tstop, t, solver_params, membrane_params, filename=None, save_fields=False, save_solver_stats=False)")
+            sys.exit(0)
+
+        if self.save_fields:
+            # initialize file for fields (solutions to PDEs)
             self.init_h5_savefile(filename + 'results.h5')
-            # file for CPU timings, number of iterations etc.
-            self.init_solver_statistics(filename + 'solver/')
+
+        if self.save_solver_stats:
+            # initialize file for solver statistics (CPU timings, number of iterations etc)
+            self.init_solver_stats(filename + 'solver/')
 
         # Solve system (PDEs and ODEs)
         for k in range(int(round(Tstop/float(self.dt)))):
@@ -1098,29 +1123,27 @@ class Solver:
             #self.solve_for_time_step_picard(k, t)
 
             # Save results
-            if (k % self.sf) == 0 and filename is not None:
-                self.save_h5()              # fields
+            if (k % self.sf) == 0 and self.save_fields:
+                self.save_h5()
 
         # Close files
-        if filename is not None:
+        if self.save_fields:
             self.close_h5()
-            self.close_solver_statistics()
+        if self.save_solver_stats:
+            self.close_solver_stats()
 
         return
 
     def update_ode(self, ode_model):
-        """ Update parameters in ODE solver (based on previous PDEs step)
-            specific to membrane model
-
-            This method must be tailored to the specific membrane model and is
-            meant to be implemented by subclasses.
-        """
+        """ Update parameters in ODE solver (based on previous PDE-step) that
+            are specific to membrane model. This method is meant to be
+            implemented by subclasses """
 
         raise NotImplementedError("Subclasses must implement the 'update_ode' function.")
 
         return
 
-    def init_solver_statistics(self, path_timings):
+    def init_solver_stats(self, path_timings):
         """ write CPU timings (solve and assemble), condition number and number of
             iterations to file """
 
@@ -1169,7 +1192,7 @@ class Solver:
         self.file_knp_assem.write("num cells: %d \n" % num_cells)
         self.file_knp_assem.write("dofs: %d \n" % dofs_knp)
 
-    def close_solver_statistics(self):
+    def close_solver_stats(self):
 
         if not self.direct_emi:
             self.file_emi_niter.close()
@@ -1185,6 +1208,7 @@ class Solver:
 
     def init_h5_savefile(self, filename):
         """ initialize h5 file """
+
         self.h5_idx = 0
         self.h5_file = HDF5File(self.mesh.mpi_comm(), filename, 'w')
         self.h5_file.write(self.mesh, '/mesh')
@@ -1199,6 +1223,7 @@ class Solver:
 
     def save_h5(self):
         """ save results to h5 file """
+
         self.h5_idx += 1
         self.h5_file.write(self.c, '/concentrations',  self.h5_idx)
         self.h5_file.write(self.ion_list[-1]['c'], '/elim_concentration',  self.h5_idx)

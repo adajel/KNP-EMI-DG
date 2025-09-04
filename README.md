@@ -3,9 +3,9 @@
 ### About
 
 Code for solving the KNP--EMI problem using a DG fem method. The numerical
-strategy is described in Ellingsrud, Benedusi, and Kuchta. *A splitting, discontinuous Galerkin solver for the cell-by-cell
-electroneutral Nernst–Planck framework.* SIAM Journal on Scientific Computing
-47.2 (2025): B477-B504. [DOI:10.1137/24M1653367](https://doi.org/10.1137/24M1653367)
+method is described in Ellingsrud, Benedusi, and Kuchta. [A splitting, discontinuous Galerkin solver for the cell-by-cell
+electroneutral Nernst–Planck framework.](https://doi.org/10.1137/24M1653367) SIAM Journal on Scientific Computing
+47.2 (2025): B477-B504.
 
 ### Dependencies
 
@@ -30,12 +30,70 @@ conda activate KNP-EMI
 
 ### Installation
 
-To install package run
+To install the package run
 ```bash
 python3 -m pip install -e .
 ```
+### Usage
+
+## Stimuli
+The KNP-EMI system can be stimulated either via (1) a membrane current (ODE
+stimuli), or (2) an injection of ECS ion concentrations (PDE stimuli).
+The stimuli is specified in a run file (see e.g.
+examples/idealized_geometries/run_2D.py for ODE stimuli or
+examples/potassium-buffering for PDE stimuli).
+
+For the ODE stimuli, the strength of the synaptic conductivity and stimuli zone
+must be specified:
+
+```
+# synaptic conductivity (S/m**2)
+g_syn_bar = 10
+stimulus = {'stim_amplitude': g_syn_bar}
+
+# stimulus zone
+stimulus_locator = lambda x: (x[0] < 20e-6)
+
+# set stimuli parameters
+stim_params = namedtuple('membrane_params', ('g_syn_bar', \
+                         'stimulus', 'stimulus_locator'))(g_syn_bar, \
+                          stimulus, stimulus_locator)
+```
+
+Below is an example of (PDE) stimuli via an ECS ion injection of potassium
+(see also examples/potassium-buffering/run_K_stimuli.py)
+
+```
+# stimuli region
+xmin = 2700e-7; xmax = 3100e-7
+ymin = 1700e-7; ymax = 2100e-7
+zmin = 1800e-7; zmax = 2200e-7
+
+# source term ECS potassium
+f_neuron_K = Expression("g_syn*(xmin <= x[0])*(x[0] <= xmax)* \
+                               (ymin <= x[1])*(x[1] <= ymax)* \
+                               (zmin <= x[2])*(x[2] <= zmax)* \
+                               (0.2 <= t)*(t <= t_syn)",
+                               t=t, g_syn=g_syn, t_syn=t_syn,
+                               xmin=xmin, xmax=xmax,
+                               ymin=ymin, ymax=ymax,
+                               zmin=zmin, zmax=zmax,
+                               degree=4)
+```
+
+## Membrane model
+
+The membrane model must be specified (see e.g. examples/mm_hh.py) similarly to
+what a [gotranx](https://github.com/finsberg/gotranx/tree/main) generated file
+looks like.
+
+## Solver
+## Mesh
 
 ### Reproduce results from paper
+
+To reproduce (a selection) of the results from Ellingsrud et al., run the
+following scripts.
 
 ```bash
 
@@ -46,13 +104,13 @@ python3 tests/run_MMS_space.py
 python3 tests/run_MMS_time.py
 
 # run simulation on idealized 2D geometry
-python3 examples/run_2D.py
+python3 examples/idealized-geometries/run_2D.py
 
 # run simulation on idealized 3D geometry
-python3 examples/run_3D.py
+python3 examples/idealized-geometries/run_3D.py
 
 # run simulation on realistic 3D geometry of rat neuron
-python3 examples/run_rat_neuron.py
+python3 examples/rat-neuron/run_rat_neuron.py
 
 ```
 

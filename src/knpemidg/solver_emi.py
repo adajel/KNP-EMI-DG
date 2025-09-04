@@ -28,19 +28,9 @@ class bcolors:
     UNDERLINE = '\033[4m'
 
 # We here approximate the following system:
-#     d(c_k)/dt + div(J_k) = 0, (emi)
-#   - F sum_k z^k div(J_k) = 0, (knp)
+#   - F sum_k z^k div(J_k) = 0, (emi)
 #   where
 #   J_k(c_k, phi) = - D grad(c_k) - z_k D_k psi c_k grad(phi)
-#
-#   We solve the system iteratively, by decoupling the first and second
-#   equation, yielding the following system: Given c_k_ and phi_M_
-#   iterate over the two following steps:
-#
-#       step I:  (emi) find phi by solving (2), with J^k(c_k_, phi)
-#       step II: (knp) find c_k by solving (1) with J^k(c_k, phi), where phi
-#                is the solution from step I
-#      (step III: solve ODEs at interface, and update membrane potential)
 #
 # Membrane potential is defined as phi_i - phi_e, since we have
 # marked cell in ECS with 0 and cells in ICS with 1 we have an

@@ -1,4 +1,5 @@
-# Gotran generated code for the "hodgkin_huxley_squid_axon_model_1952_original" model
+# Gotran generated code for the "hodgkin_huxley_squid_axon_model_1952_original"
+# model
 
 import numpy as np
 import math

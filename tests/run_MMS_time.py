@@ -7,7 +7,7 @@ parameters['ghost_mode'] = 'shared_vertex'
 
 if __name__ == '__main__':
     from mms_time import setup_mms
-    from knpemidg import as Solver
+    from knpemidg import Solver
     from collections import namedtuple
     from itertools import chain
 
