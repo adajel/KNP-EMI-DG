@@ -2,7 +2,7 @@ import os
 import dolfin as df
 import numpy as np
 import matplotlib.pyplot as plt
-import mm_two_tags_calibration_ODE as ode
+import mm_calibration as ode
 from knpemidg.membrane import MembraneModel
 from collections import namedtuple
 
@@ -80,13 +80,6 @@ Na_g_history = np.array(Na_g_history)
 Cl_e_history = np.array(Cl_e_history)
 Cl_n_history = np.array(Cl_n_history)
 Cl_g_history = np.array(Cl_g_history)
-
-temperature = 307e3            # temperature (m K)
-R = 8.315e3                    # Gas Constant (m J/(K mol))
-F = 96500e3                    # Faraday's constant (mC/ mol)
-
-E_Cl_g = - R * temperature / F * np.log(Cl_e_history/Cl_g_history)
-
 n_history = np.array(n_history)
 m_history = np.array(m_history)
 h_history = np.array(h_history)
@@ -102,69 +95,63 @@ print("Na_g_init =", Na_g_history[-1, 2])
 print("Cl_e_init =", Cl_e_history[-1, 2])
 print("Cl_n_init =", Cl_n_history[-1, 2])
 print("Cl_g_init =", Cl_g_history[-1, 2])
-
 print("n_init =", n_history[-1, 2])
 print("m_init =", m_history[-1, 2])
 print("h_init =", h_history[-1, 2])
 
-fig, ax = plt.subplots(4, 1, sharex=True)
-ax[0].plot(potential_history_n[:, 2])
-ax[1].plot(potential_history_g[:, 2])
-ax[2].plot(K_e_history[:, 2])
-#ax[2].plot(K_i_history[:, 2])
-ax[3].plot(Na_e_history[:, 2])
-#ax[4].plot(Na_i_history[:, 2])
-ax[0].set_title("V_n")
-ax[1].set_title("V_g")
-ax[2].set_title("K_e")
-#ax[2].set_title("K_i")
-ax[3].set_title("Na_e")
-#ax[4].set_title("Na_i")
+# ODE plots
+fig = plt.figure(figsize=(16,12))
+ax = plt.gca()
+
+ax1 = fig.add_subplot(3,4,1)
+plt.title(r'ECS Na$^+$')
+plt.plot(Na_e_history[:, 2], linewidth=3, color='b')
+
+ax2 = fig.add_subplot(3,4,2)
+plt.title(r'ECS K$^+$')
+plt.plot(K_e_history[:, 2], linewidth=3, color='b')
+
+ax3 = fig.add_subplot(3,4,3)
+plt.title(r'Neuron Na$^+$')
+plt.plot(Na_n_history[:, 2],linewidth=3, color='r')
+
+ax4 = fig.add_subplot(3,4,4)
+plt.title(r'Neuron K$^+$')
+plt.plot(K_n_history[:, 2],linewidth=3, color='r')
+
+ax3 = fig.add_subplot(3,4,5)
+plt.title(r'Glia Na$^+$')
+plt.plot(Na_g_history[:, 2],linewidth=3, color='r')
+
+ax4 = fig.add_subplot(3,4,6)
+plt.title(r'Glia K$^+$')
+plt.plot(K_g_history[:, 2],linewidth=3, color='r')
+
+ax5 = fig.add_subplot(3,4,7)
+plt.title(r'Membrane potential neuron')
+plt.plot(potential_history_n[:, 2], linewidth=3)
+
+ax6 = fig.add_subplot(3,4,8)
+plt.title(r'Membrane potential glial')
+plt.plot(potential_history_g[:, 2], linewidth=3)
+
+ax7 = fig.add_subplot(3,4,9)
+plt.title(r'Gating variable n')
+plt.plot(n_history[:, 2], linewidth=3)
+
+ax8 = fig.add_subplot(3,4,10)
+plt.title(r'Gating variable m')
+plt.ylabel(r'$\phi_M$ (mV)')
+plt.plot(m_history[:, 2], linewidth=3)
+
+ax9 = fig.add_subplot(3,4,11)
+plt.title(r'Gating variable h')
+plt.plot(h_history[:, 2], linewidth=3)
+
+# make pretty
+ax.axis('off')
 plt.tight_layout()
-fig.savefig("results/figures/ode.png")
-#plt.show()
+
+# save figure to file
+plt.savefig('calibration.svg', format='svg')
 plt.close()
-
-fig = plt.figure()
-plt.plot(potential_history_n[:, 2])
-#plt.ylim([-72, -70])
-plt.tight_layout()
-fig.savefig("results/figures/phiM_n.png")
-
-fig = plt.figure()
-plt.plot(potential_history_g[:, 2])
-#plt.ylim([-72, -70])
-plt.tight_layout()
-fig.savefig("results/figures/phiM_g.png")
-
-fig = plt.figure()
-plt.plot(K_e_history[:, 2])
-#plt.ylim([4, 4.1])
-plt.tight_layout()
-fig.savefig("results/figures/K_e.png")
-
-fig = plt.figure()
-plt.plot(Na_e_history[:, 2])
-#plt.ylim([99, 100])
-plt.tight_layout()
-fig.savefig("results/figures/Na_e.png")
-
-fig = plt.figure()
-plt.plot(Cl_e_history[:, 2])
-#plt.ylim([99, 100])
-plt.tight_layout()
-fig.savefig("results/figures/Cl_e.png")
-
-fig = plt.figure()
-plt.plot(E_Cl_g[:, 2])
-plt.plot(potential_history_g[:, 2], linestyle="dotted")
-#plt.ylim([99, 100])
-plt.tight_layout()
-fig.savefig("results/figures/E_Cl_g.png")
-
-# TODO:
-# - consider a test where we have dy/dt = A(x)y with y(t=0) = y0
-# - after stepping u should be fine
-# - add forcing:  dy/dt = A(x)y + f(t) with y(t=0) = y0
-# - things are currently quite slow -> multiprocessing?
-# - rely on cbc.beat?
