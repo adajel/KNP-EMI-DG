@@ -35,12 +35,13 @@ python3 -m pip install -e .
 ```
 
 ### Idealized geometries
-The directory [examples/idealized-geometries] contains code for running a 2D
-and a 3D simulation on idealized geometries with neurons surrounded by ECS.
+The directory [examples/idealized-geometries](https://github.com/adajel/KNP-EMI-DG/tree/main/examples/idealized-geometries)
+contains code for running 2D and 3D simulations on idealized geometries 
+representing neurons surrounded by ECS with Hodgkin-Huxley membrane dynamics.
 
 ### EMIx simulation
 The directory
-[examples/emix-simulations](https://github.com/adajel/KNP-EMI-DG/tree/main/examples/emix-simulations/calibrate-homogenious-membrane-model)
+[examples/emix-simulations](https://github.com/adajel/KNP-EMI-DG/tree/main/examples/emix-simulations)
 contains an example where the KNP-EMI DG code is used to run an
 electrodiffusive simulation on a realistic 3D geometry representing
 brain tissue generated via the
@@ -48,7 +49,9 @@ brain tissue generated via the
 
 The initial conditions for the coupled KNP-EMI system are calibrated by solving
 an extended system of ODEs to ensure an initial steady state - see
-[examples/emix-simulations/calibrate-homogenious-membrane-model](https://github.com/adajel/KNP-EMI-DG/blob/main/examples/emix-simulations/calibrate-homogenious-membrane-model)
+mm_calibrated.py and run_calibration.py for 
+[mm_calibration.py](https://github.com/adajel/KNP-EMI-DG/blob/main/examples/emix-simulations/mm_calibration.py), 
+[run_calibration.py](https://github.com/adajel/KNP-EMI-DG/blob/main/examples/emix-simulations/run_calibration.py), 
 for further details.
 
 ### Selected files

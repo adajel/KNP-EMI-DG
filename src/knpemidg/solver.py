@@ -1151,7 +1151,12 @@ class Solver:
         if not os.path.exists(path_timings):
             os.mkdir(path_timings)
 
-        reso = self.solver_params.resolution
+        try:
+            # Check is resolution is specified in run file
+            reso = self.solver_params.resolution
+        except NameError:
+            # Set resolution to default value 0 if not specified
+            reso = "0"
 
         # get number of mesh cells, number of dofs emi, number of dofs knp
         num_cells = self.mesh.num_cells()
