@@ -34,69 +34,32 @@ To install the package run
 python3 -m pip install -e .
 ```
 
-### Reproduce results from paper
-
-To reproduce (a selection) of the results from
-[Ellingsrud et al. 2025](https://doi.org/10.1137/24M1653367 "Ellingsrud, Benedusi, and Kuchta. A splitting, discontinuous Galerkin solver for the cell-by-cell electroneutral Nernst–Planck framework.SIAM Journal on Scientific Computing 47.2 (2025): B477-B504.")
-, run the following scripts.
-
-```bash
-
-# run MMS test in space
-python3 tests/run_MMS_space.py
-
-# run MMS test in space
-python3 tests/run_MMS_time.py
-
-# run simulation on idealized 2D geometry
-python3 examples/idealized-geometries/run_2D.py
-
-# run simulation on idealized 3D geometry
-python3 examples/idealized-geometries/run_3D.py
-
-# run simulation on realistic 3D geometry of rat neuron
-python3 examples/rat-neuron/run_rat_neuron.py
-
-```
+### Idealized geometries
+The directory [examples/idealized-geometries] contains code for running a 2D
+and a 3D simulation on idealized geometries with neurons surrounded by ECS.
 
 ### EMIx simulation
 The directory
 [examples/emix-simulations](https://github.com/adajel/KNP-EMI-DG/tree/main/examples/emix-simulations/calibrate-homogenious-membrane-model)
 contains an example where the KNP-EMI DG code is used to run an
 electrodiffusive simulation on a realistic 3D geometry representing
-brain generated via the
+brain tissue generated via the
 [emimesh](https://github.com/scientificcomputing/emimesh/tree/main) pipeline.
 
-The initial conditions for the PDE/ODE KNP-EMI system are calibrated by solving
-an extended system of ODEs - see:
-- [examples/emix-simulations/calibrate-homogenious-membrane-model/mm_calibration.py](https://github.com/adajel/KNP-EMI-DG/blob/main/examples/emix-simulations/calibrate-homogenious-membrane-model/mm_callibration.py)
-- [examples/emix-simulations/calibrate-homogenious-membrane-model/run_calibration.py](https://github.com/adajel/KNP-EMI-DG/blob/main/examples/emix-simulations/calibrate-homogenious-membrane-model/run_calibration.py)
+The initial conditions for the coupled KNP-EMI system are calibrated by solving
+an extended system of ODEs to ensure an initial steady state - see
+[examples/emix-simulations/calibrate-homogenious-membrane-model](https://github.com/adajel/KNP-EMI-DG/blob/main/examples/emix-simulations/calibrate-homogenious-membrane-model)
 for further details.
 
-### Files
+### Selected files
 
-- [solver.py](./src/knpemi/solver.py): class for PDE solver.
-
-- [membrane.py](./src/membrane.py): class for membrane model (ODE stepping, functions for communication
+- [solver.py](https://github.com/adajel/KNP-EMI-DG/tree/main/src/knpemidg/solver.py): class for PDE solver.
+- [membrane.py](https://github.com/adajel/KNP-EMI-DG/tree/main/src/knpemidg/membrane.py): class for membrane model (ODE stepping, functions for communication
   between PDE and ODE solver etc.).
-
-- `mm\_\*.py`: spesification of membrane model (including all membrane parameters)
-
-  - [mm_hh.py](./src/mm_hh.py): Hodkin Huxley model (with ODEs)
-  - [mm_leak.py](./src/mm_leak.py): passive leak model (no ODEs)
-
+- [mm_hh.py](https://github.com/adajel/KNP-EMI-DG/tree/main/examples/idealized-geometries/mm_hh.py): Hodkin Huxley model (with ODEs)
 - run\_\*.py: scripts for running various simulations. Contains PDE parameters
   (mesh, physical and numerical parameters)
-
-  - [run_MMS_space.py](./src/run_MMS_space.py): MMS test in space
-  - [run_MMS_time.py](./src/run_MMS_time.py): MMS test in time
-  - [run_2D.py](./src/run_2D.py): simulation with Hodkin Huxley dynamics in idealized 3D axons
-  - [run_3D.py](./src/run_3D.py): simulation with Hodkin Huxley dynamics in idealized 3D axons
-  - [run_rat_neuron.py](./src/run_rat_neuron.py): simulation with spatially varying membrane mechanisms in realistic 3D geometry
-
-- `make*mesh*\*.py`: scripts for generating idealized 2D and 3D meshes
-
-- `make*mesh*\*.py`: scripts for generating figures
+ `make*mesh\_\*\*.py`: scripts for generating idealized 2D and 3D meshes
 
 ### Geometry
 
