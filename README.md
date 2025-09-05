@@ -49,10 +49,8 @@ brain tissue generated via the
 
 The initial conditions for the coupled KNP-EMI system are calibrated by solving
 an extended system of ODEs to ensure an initial steady state - see
-mm_calibrated.py and run_calibration.py for 
-[mm_calibration.py](https://github.com/adajel/KNP-EMI-DG/blob/main/examples/emix-simulations/mm_calibration.py), 
-[run_calibration.py](https://github.com/adajel/KNP-EMI-DG/blob/main/examples/emix-simulations/run_calibration.py), 
-for further details.
+[mm_calibration.py](https://github.com/adajel/KNP-EMI-DG/blob/main/examples/emix-simulations/mm_calibration.py) and
+[run_calibration.py](https://github.com/adajel/KNP-EMI-DG/blob/main/examples/emix-simulations/run_calibration.py) for further details.
 
 ### Selected files
 
