@@ -729,34 +729,25 @@ x_outside_ROI = {"M": [0.0003844771569042325, 0.00038766154959819847, 0.00037534
                  "E": [0.0003637753007305006, 0.0003705360300998128, 0.0003625574818125377], \
                  "I": [0.0003548050620792965, 0.0003520433961759351, 0.0003739900092393671]}
 
-T = 1.5
-#fname = "results/data/EMIx-synapse_100_tort_short_4_tort_both_ICS_and_ECS/results.h5"
-#fnameout = "results/data/EMIx-synapse_100_tort_short_4_tort_both_ICS_and_ECS/"
-#plot_3D_concentration_glial(res_3D, T, dt, x_ROI, fname, fnameout)
-#plot_surface(fname, fnameout, T, dt)
-#write_to_pvd(fname, fnameout, T, dt)
+T = 10
 
-#T = 10
-#fname = "results/data/EMIx-synapse_100_tort_short_4_tort_both_ICS_and_ECS/results.h5"
-#fnameout = "results/data/EMIx-synapse_100_tort_short_4_tort_both_ICS_and_ECS/"
-
-#plot_3D_concentration_glial(res_3D, T, dt, x_ROI, fname, fnameout)
-#plot_surface(fname, fnameout, T, dt)
-#write_to_pvd(fname, fnameout, T, dt)
-
-#fname = "results/data/EMIx-synapse_100_tort_short_2_tort_both_ICS_and_ECS/results.h5"
-#fnameout = "results/data/EMIx-synapse_100_tort_short_2_tort_both_ICS_and_ECS/"
-
-#plot_3D_concentration_glial(res_3D, T, dt, x_ROI, fname, fnameout)
-#plot_surface(fname, fnameout, T, dt)
-#write_to_pvd(fname, fnameout, T, dt)
-
-fname = "results/data/EMIx-synapse_100_tort_short_baseline/results.h5"
-fnameout = "results/data/EMIx-synapse_100_tort_short_baseline/"
-
+fname = "results/data/EMIx-synapse_100_tort_short_4_tort_both_ICS_and_ECS/results.h5"
+fnameout = "results/data/EMIx-synapse_100_tort_short_4_tort_both_ICS_and_ECS/"
 plot_3D_concentration_glial(res_3D, T, dt, x_ROI, fname, fnameout)
 plot_surface(fname, fnameout, T, dt)
 write_to_pvd(fname, fnameout, T, dt)
+
+#fname = "results/data/EMIx-synapse_100_tort_short_2_tort_both_ICS_and_ECS/results.h5"
+#fnameout = "results/data/EMIx-synapse_100_tort_short_2_tort_both_ICS_and_ECS/"
+#plot_3D_concentration_glial(res_3D, T, dt, x_ROI, fname, fnameout)
+#plot_surface(fname, fnameout, T, dt)
+#write_to_pvd(fname, fnameout, T, dt)
+
+#fname = "results/data/EMIx-synapse_100_tort_short_baseline/results.h5"
+#fnameout = "results/data/EMIx-synapse_100_tort_short_baseline/"
+#plot_3D_concentration_glial(res_3D, T, dt, x_ROI, fname, fnameout)
+#plot_surface(fname, fnameout, T, dt)
+#write_to_pvd(fname, fnameout, T, dt)
 
 """
 T = 0.5

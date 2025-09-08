@@ -79,7 +79,7 @@ if __name__ == "__main__":
 
     # Time variables (PDEs)
     dt = 0.1                         # global time step (ms)
-    Tstop = 1.5                      # ms
+    Tstop = 10                       # ms
 
     t = Constant(0.0)                # time constant
 
@@ -125,10 +125,10 @@ if __name__ == "__main__":
     t_syn = 1.2
 
     # baseline
-    lambda_i = 3.2
-    lambda_e = 1.6
-    fname = "results/data/EMIx-synapse_100_tort_short_baseline/"
-    g_syn = 200
+    #lambda_i = 3.2
+    #lambda_e = 1.6
+    #fname = "results/data/EMIx-synapse_100_tort_short_baseline/"
+    #g_syn = 200
 
     # M1: increase ECS and ICS lambda
     #lambda_i = 3.2*2
@@ -137,10 +137,10 @@ if __name__ == "__main__":
     #g_syn = 65
 
     # M2: increase ECS and ICS lambda
-    #lambda_i = 3.2*4
-    #lambda_e = 1.6*4
-    #fname = "results/data/EMIx-synapse_100_tort_short_4_tort_both_ICS_and_ECS/"
-    #g_syn = 26
+    lambda_i = 3.2*4
+    lambda_e = 1.6*4
+    fname = "results/data/EMIx-synapse_100_tort_short_4_tort_both_ICS_and_ECS/"
+    g_syn = 26
 
     phi_M_init_type = 'constant'
 
