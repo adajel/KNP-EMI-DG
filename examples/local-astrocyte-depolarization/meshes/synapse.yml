@@ -1,0 +1,22 @@
+name : synapse
+fixed : 
+  raw:
+    #cloudpath : "local://annotations"
+    cloudpath : "precomputed://gs://iarpa_microns/minnie/minnie65/seg"
+    mip : 2 # resolution of data
+    position : "336081-124970-18132" # factor two? Should work
+
+  processing:
+    operation : 
+      - "removeislands minsize=5000"
+      - "dilate iterations=1 radius=1" # swell cells
+      - "smooth iterations=1 radius=1"
+      - "erode iterations=1 radius=1"  # shrink cells
+      - "removeislands minsize=5000"
+raw:
+  size : [5000] # nm
+processing:
+  dx : 20 # resolution of mesh
+  ncells : [100]
+meshing:
+    envelopsize : [18]
